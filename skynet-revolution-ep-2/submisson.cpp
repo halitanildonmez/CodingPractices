@@ -66,7 +66,7 @@ int main()
             // Write an action using cout. DON'T FORGET THE "<< endl"
             // To debug: cerr << "Debug messages..." << endl;
             // Example: 3 4 are the indices of the nodes you wish to sever the link between
-            cout << "3 4" << endl;   
+            cout << gatewayNode.at (0) << " " << adjGraph[gatewayNode.at (0)][0] << endl;   
         }
  
     }

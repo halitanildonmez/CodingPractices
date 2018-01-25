@@ -6,6 +6,18 @@
 #include <queue>
 using namespace std;
 
+int findMin (int *arr, int N) {
+    int maxVal = 100;
+    int index = -1;
+    for (int i = 0; i < N; i++) {
+        if (arr [i] < maxVal) {
+            maxVal = arr [i];
+            index = i;
+        }
+    }
+    return index;
+}
+
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
@@ -27,7 +39,6 @@ int main()
         cin >> N1 >> N2; cin.ignore();
         adjGraph[N1].push_back(N2);
         adjGraph[N2].push_back(N1);
-        
     }
     for (int i = 0; i < E; i++) {
         int EI; // the index of a gateway node
@@ -35,10 +46,39 @@ int main()
         gatewayNode.push_back(EI);
     }
     
+    vector<int> q;
     bool *visited = new bool[N];
-    for(int i = 0; i < N; i++)
+    int *distances = new int [N];
+    for(int i = 0; i < N; i++) {
         visited[i] = false;
+        distances [i] = 100;
+        q.push_back (i);
+    }
+        
     
+    int startNode = gatewayNode[0];
+    
+    
+    vector<int> prev[N];
+    distances[startNode] = 0;
+    
+    visited[startNode] = true;
+    
+    while (!q.empty()) {
+        int u = findMin (distances, N);
+        vector <int>::iterator minElem = q.begin();
+        minElem = std::find (q.begin (), q.end(), u);
+        if (minElem != q.end ()) {
+            q.erase (q.begin () + std::distance (q.begin (), minElem));
+        }
+        for (std::vector<int>::iterator it = adjGraph[u].begin() ; it != adjGraph[u].end(); ++it) {
+            int dist = distances [u] + 1;
+            if (dist < distances [*it]) {
+                distances [*it] = dist;
+                prev [*it].push_back(u);
+            }
+        }
+    }
     
     // game loop
     while (1) {
@@ -71,6 +111,39 @@ int main()
  
     }
 }
+/*
+            queue.push(SI);
+            visited [SI] = true;
+            while (!queue.empty()) {
+                int cur = queue.front();
+                queue.pop ();
+                if (std::find(gatewayNode.begin(), gatewayNode.end(), cur) != gatewayNode.end()) {
+                    vector<int> allAdj = adjGraph[cur];
+                    int tmp = allAdj.at (0);
+                    for (std::vector<int>::iterator it2 = allAdj.begin() ; it2 != allAdj.end(); ++it2) {
+                        int curNeigh = *it2;
+                        if ( curNeigh == SI) {
+                            tmp = curNeigh;
+                        }
+                    }
+                    if (!alreadySevered) {
+                        cerr << "HUH" << endl;
+                        cout << cur << " " << tmp << endl;
+                    }
+                        
+                }
+                
+                vector <int> adjacentNodes = adjGraph[cur];
+                for (std::vector<int>::iterator it3 = adjacentNodes.begin() ; it3 != adjacentNodes.end(); ++it3) {
+                    int neigh = *it3;
+                    if (!visited[neigh]) {
+                        queue.push (neigh);
+                        visited [neigh] = true;
+                    }
+                }
+                
+            }
+*/
 /*
             queue.push(SI);
             visited [SI] = true;

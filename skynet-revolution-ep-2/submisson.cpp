@@ -56,7 +56,7 @@ int distToStart (int start, int end, vector<int> adjGraph[], int N, vector<int> 
             cerr << tmpVexc[j];
             if (tmpVexc[j] == end) {
                 p = tmpVexc[j];
-                cerr << p << " PP " << endl;
+                //cerr << p << " PP " << endl;
                 break;
             }
         }
@@ -83,13 +83,15 @@ int main()
     vector<int> adjGraph[N]; 
     vector<int> gatewayNode;
     vector<int> nodes (N);
-    
+    int aa[N][N];
     for (int i = 0; i < L; i++) {
         int N1; // N1 and N2 defines a link between these nodes
         int N2;
         cin >> N1 >> N2; cin.ignore();
         adjGraph[N1].push_back(N2);
         adjGraph[N2].push_back(N1);
+        aa[N1][N2] = 1;
+        aa[N2][N1] = 1;
         visited[N1] = false;
     }
     for (int i = 0; i < E; i++) {
@@ -102,6 +104,7 @@ int main()
     for (int i = 0; i < N; i++) {
         nodes.push_back(i);
     }
+
     // game loop
     while (1) {
         int SI; // The index of the node on which the Skynet agent is positioned this turn
@@ -111,15 +114,35 @@ int main()
         int gateY = -1;
         int hh = -1;
         for (int i = 0; i < E; i++) {
-            int curVal = distToStart(SI, gatewayNode[i], adjGraph, N, nodes, gateY);
             int gIndex = gatewayNode[i];
-            if (curVal < minVal && (!visited[gateY])) {
+            vector<int> tmpNeihs = adjGraph[gIndex];
+            bool foundGate = false;
+            for (int l = 0; l < tmpNeihs.size (); l++) {
+                if (tmpNeihs[l] == SI && aa[gIndex][SI] == 1 || aa[SI][gIndex] == 1) {
+                    foundGate = true;
+                    gateY = gIndex;
+                    break;
+                }
+            }
+            if (foundGate) {
+                cerr << "Entered " << gateY << endl;
+                gateX = SI;
+                hh = gateY;
+                break;
+            }
+            int curVal = distToStart(SI, gatewayNode[i], adjGraph, N, nodes, gateY);
+            cerr << "compare " << gateY << endl;
+            if (curVal <= minVal) {
                 minVal = curVal;
                 gateX = gatewayNode[i];
+                cerr << "SETTING HH TO " << gateY << endl;
                 hh = gateY;
             }
         }
         visited [gateY] = true;
+        aa[gateX][gateY] = 0;
+        aa[gateY][gateX] = 0;
+        adjGraph[gateX].erase (std::remove(adjGraph[gateX].begin(), adjGraph[gateX].end(), hh), adjGraph[gateX].end());
         cout << gateX << " " << hh << endl;
    
     }

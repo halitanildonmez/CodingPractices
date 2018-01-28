@@ -45,22 +45,28 @@ int distToStart (int start, int end, vector<int> adjGraph[], int N, vector<int> 
             }
         }
     }
-    cerr << "start" << start << " end " << end << endl;
+    //cerr << "start" << start << " end " << end << endl;
+    cerr << "prev " << prev[end].size () << endl;
     int retVal = distances[end];
+    if (prev[end].size () == 0) {
+        delete[]distances;
+        delete[]visited;
+        return 500;
+    }
     p = prev[end][0];
-    cerr << "SADASD " << p << endl;
+    //cerr << "SADASD " << p << endl;
     for (int i = 0; i < N; i++) {
         vector<int> tmpVexc = prev[i];
-        cerr << "for " << i << " ";
+        //cerr << "for " << i << " ";
         for (int j = 0; j < tmpVexc.size (); j++) {
-            cerr << tmpVexc[j];
+            //cerr << tmpVexc[j];
             if (tmpVexc[j] == end) {
                 p = tmpVexc[j];
                 //cerr << p << " PP " << endl;
                 break;
             }
         }
-        cerr << endl;
+        //cerr << endl;
     }
     delete[]distances;
     delete[]visited;
@@ -113,6 +119,7 @@ int main()
         int gateX = -1;
         int gateY = -1;
         int hh = -1;
+        int neighSize = 0;
         for (int i = 0; i < E; i++) {
             int gIndex = gatewayNode[i];
             vector<int> tmpNeihs = adjGraph[gIndex];
@@ -125,24 +132,42 @@ int main()
                 }
             }
             if (foundGate) {
-                cerr << "Entered " << gateY << endl;
                 gateX = SI;
                 hh = gateY;
                 break;
             }
             int curVal = distToStart(SI, gatewayNode[i], adjGraph, N, nodes, gateY);
-            cerr << "compare " << gateY << endl;
-            if (curVal <= minVal) {
-                minVal = curVal;
-                gateX = gatewayNode[i];
-                cerr << "SETTING HH TO " << gateY << endl;
-                hh = gateY;
+            
+            cerr << "distance from " << SI << " to " << gatewayNode[i] << " is " << curVal << endl;
+            
+            if (curVal <= minVal && adjGraph[gatewayNode[i]].size() > 0) {
+                if (adjGraph[gateY].size () >= neighSize) {
+                    neighSize = adjGraph[gateY].size ();
+                    cerr << "Have chosen " << gateY << " neigh size " << neighSize << endl;
+                    minVal = curVal;
+                    gateX = gatewayNode[i];
+                    hh = gateY;    
+                }
             }
         }
         visited [gateY] = true;
+        
         aa[gateX][gateY] = 0;
         aa[gateY][gateX] = 0;
+        
         adjGraph[gateX].erase (std::remove(adjGraph[gateX].begin(), adjGraph[gateX].end(), hh), adjGraph[gateX].end());
+        
+        cerr << "trying to remove " <<adjGraph[gateY].size () << endl;
+        
+        adjGraph[gateY].erase (std::remove(adjGraph[gateY].begin(), adjGraph[gateY].end(), gateX), adjGraph[gateY].end());
+        
+        vector <int> asd = adjGraph[gateY];
+        for (int asdf : asd) {
+            cerr << asdf << endl;
+        }
+        
+        cerr << adjGraph[gateX].size () << endl;
+        
         cout << gateX << " " << hh << endl;
    
     }

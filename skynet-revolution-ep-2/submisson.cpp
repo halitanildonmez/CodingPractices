@@ -6,23 +6,6 @@
 #include <queue>
 using namespace std;
 
-int countGatewayLinks (vector<int> adjGraph[], vector<int> gatewayNode, int nodeToCheck, int curNode) {
-    vector<int> neighs = adjGraph[nodeToCheck];
-    if (neighs.size () == 0)
-        return -1;
-    int res = 1;
-    for (int i = 0; i < neighs.size (); i++) {
-        int cur = neighs[i];
-        if (cur != curNode) {
-            for (int j = 0; j < gatewayNode.size (); j++) {
-                if (gatewayNode[j] == cur)
-                    res++;
-            }
-        }
-    }
-    return res;
-}
-
 int distToStart (int start, int end, vector<int> adjGraph[], int N, vector<int> nodes, vector<int> gatewayNode, int &p) {
     int *distances = new int[N];
     bool *visited = new bool [N];
@@ -54,38 +37,47 @@ int distToStart (int start, int end, vector<int> adjGraph[], int N, vector<int> 
         nodes.erase (nodes.begin () + delIndex);
         visited[curNode] = true;
         vector<int> neighs = adjGraph[curNode];
+        int count = 0;
+        int tmpGate = -1;
+        int tmpGateY = -1;
+        for (int nn : neighs) {
+            for (int gateW : gatewayNode) {
+                if (nn == gateW && gateW != tmpGate) {
+                    tmpGate = gateW;
+                    count++;
+                }
+            }
+        }
         for (int i = 0; i < neighs.size(); i++) {
-            
-            //cerr << neighs[i] << " ----- " << curNode << "   POINT: " << point << endl;
-            int newDist = distances[curNode] + 1;
+            int newDist = distances[curNode] + 5;
+            if (count > 1 && tmpGate == neighs[i]) {
+                cerr << tmpGate << " ---- " << endl;
+                newDist -= (5*count+1);
+            }
             if (newDist < distances[neighs[i]]) {
                 distances[neighs[i]] = newDist;
                 prev[neighs[i]].push_back(curNode);
             }
         }
     }
-    //cerr << "start" << start << " end " << end << endl;
-    //cerr << "prev " << prev[end].size () << endl;
+
     int retVal = distances[end];
     if (prev[end].size () == 0) {
         delete[]distances;
         delete[]visited;
         return 500;
     }
+    
     p = prev[end][0];
-    //cerr << "SADASD " << p << endl;
+    
     for (int i = 0; i < N; i++) {
         vector<int> tmpVexc = prev[i];
-        //cerr << "for " << i << " ";
         for (int j = 0; j < tmpVexc.size (); j++) {
-            //cerr << tmpVexc[j];
             if (tmpVexc[j] == end) {
                 p = tmpVexc[j];
-                //cerr << p << " PP " << endl;
                 break;
             }
         }
-        //cerr << endl;
     }
     delete[]distances;
     delete[]visited;
@@ -122,9 +114,7 @@ int main()
     for (int i = 0; i < E; i++) {
         int EI; // the index of a gateway node
         cin >> EI; cin.ignore();
-        //cerr << EI << endl;
         gatewayNode.push_back(EI);
-        
     }
     
     for (int i = 0; i < N; i++) {
@@ -157,14 +147,11 @@ int main()
                 break;
             }
             int curVal = distToStart(SI, gatewayNode[i], adjGraph, N, nodes, gatewayNode, gateY);
-            
-            cerr << "distance from " << SI << " to " << gatewayNode[i] << " is " << curVal << endl;
-            
-            //int point = countGatewayLinks(adjGraph, gatewayNode, gateY, gatewayNode[i]);
-            
+            cerr << "CUR VAL " << curVal << " FROM " << SI << " TO " << gatewayNode[i] << endl;
             if (curVal <= minVal && adjGraph[gatewayNode[i]].size() > 0) {
                 
                 if (adjGraph[gateY].size () >= neighSize) {
+                    cerr << "HAVE CHOSEN " << gatewayNode[i] << " AMD " << gateY << " WITH POINT " << curVal << endl;
                     neighSize = adjGraph[gateY].size ();
                     minVal = curVal;
                     gateX = gatewayNode[i];
@@ -181,19 +168,8 @@ int main()
         aa[gateY][gateX] = 0;
         
         adjGraph[gateX].erase (std::remove(adjGraph[gateX].begin(), adjGraph[gateX].end(), hh), adjGraph[gateX].end());
-        
-        //cerr << "trying to remove " <<adjGraph[gateY].size () << endl;
-        
         adjGraph[gateY].erase (std::remove(adjGraph[gateY].begin(), adjGraph[gateY].end(), gateX), adjGraph[gateY].end());
         
-        //vector <int> asd = adjGraph[gateY];
-        //for (int asdf : asd) {
-        //    cerr << asdf << endl;
-        //}
-        
-        //cerr << adjGraph[gateX].size () << endl;
-        
         cout << gateX << " " << hh << endl;
-   
     }
 }

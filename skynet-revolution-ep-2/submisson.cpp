@@ -52,7 +52,7 @@ int distToStart (int start, int end, vector<int> adjGraph[], int N, vector<int> 
             int newDist = distances[curNode] + 5;
             if (count > 1 && tmpGate == neighs[i]) {
                 cerr << tmpGate << " ---- " << endl;
-                newDist -= (5*count+1);
+                newDist -= (50*count+1);
             }
             if (newDist < distances[neighs[i]]) {
                 distances[neighs[i]] = newDist;
@@ -150,12 +150,18 @@ int main()
             cerr << "CUR VAL " << curVal << " FROM " << SI << " TO " << gatewayNode[i] << endl;
             if (curVal <= minVal && adjGraph[gatewayNode[i]].size() > 0) {
                 
-                if (adjGraph[gateY].size () >= neighSize) {
+                if (adjGraph[gateY].size () >= neighSize && curVal > 0) {
                     cerr << "HAVE CHOSEN " << gatewayNode[i] << " AMD " << gateY << " WITH POINT " << curVal << endl;
                     neighSize = adjGraph[gateY].size ();
                     minVal = curVal;
                     gateX = gatewayNode[i];
                     hh = gateY;    
+                }
+                else if (curVal < 0) {
+                    neighSize = adjGraph[gateY].size ();
+                    minVal = curVal;
+                    gateX = gatewayNode[i];
+                    hh = gateY;
                 }
                 else {
                     cerr << adjGraph[gateY].size () << endl;

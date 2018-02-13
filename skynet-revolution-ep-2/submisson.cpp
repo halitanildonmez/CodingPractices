@@ -22,6 +22,7 @@ void dijsktra (int ** graph, int source, int N, int dist[], int parents[]) {
     bool visited[N];
     int distances[N];
     int parent[N];
+    
     for (int i = 0; i < N; i++) {
         distances[i] = 500;
         visited[i] = false;
@@ -35,24 +36,27 @@ void dijsktra (int ** graph, int source, int N, int dist[], int parents[]) {
         int selectedNode = minDistance (distances, visited, N);
         visited[selectedNode] = true;
         for (int j = 0; j < N; j++) {
-            if (!visited[j] && graph[selectedNode][j] >= 1 
+            if (!visited[j] && graph[selectedNode][j] >= 1
                     && distances[selectedNode] + graph[selectedNode][j] < distances[j]) {
+                        
                 parent[j] = selectedNode;
-                parents[j] = selectedNode;
-                
                 distances[j] = graph[selectedNode][j] + distances[selectedNode];
-                dist[j] = distances[j];
                 
+                dist[j] = distances[j];
+                parents[j] = selectedNode;
             }
         }
     }
 }
 
-int findNodeWithShortestPath (int nodes[], int N, int gateways[]) {
+/**
+ Find the gateway nodes with shortest path
+*/
+int findNodeWithShortestPath (int ** graph, int nodes[], int N, int gateways[]) {
     int min = 500;
     int index = -1;
     for (int i = 0; i < N; i++) {
-        if (min >= nodes[i] && gateways[i] == 1) {
+        if (min >= nodes[i] && gateways[i] == 1 && nodes[i] > 0) {
             min = nodes[i];
             index = i;
         }
@@ -127,8 +131,16 @@ int main()
         
         dijsktra (map, SI, N, shortestPaths, parents);
         
-        int closestGatewayNode = findNodeWithShortestPath (shortestPaths, N, gatewayNodes);
+        cerr << " ---- SHORTEST PATHS ---- " << endl;
+        for (int i = 0; i < N; i++)
+            cerr << i << " " << shortestPaths[i] << endl;
+        cerr << " ---- SHORTEST PATHS END ---- " << endl;
+        
+        int closestGatewayNode = findNodeWithShortestPath (map, shortestPaths, N, gatewayNodes);
+        int parentNodeOfGatewayNode = parents[closestGatewayNode];
+        
         cerr << "Closest gateway node " << closestGatewayNode << endl;
+        cerr << "Dijkstra previous node: " << parentNodeOfGatewayNode << endl;
         
         int chokes = findClosestChokePoint(map, gatewayNodes, N, closestGatewayNode);
         cerr << "Choke point: " << chokes << endl;
@@ -136,12 +148,15 @@ int main()
         int gateX, gateY;
         if (chokes == -1) {
             // we are not in danger
-            gateX = parents[closestGatewayNode];
+            gateX = parentNodeOfGatewayNode;
             gateY = closestGatewayNode;
         } else {
             gateX = chokes;
-            gateY = 12;
+            gateY = closestGatewayNode;
         }
+        
+        map[gateX][gateY] = -1;
+        map[gateY][gateX] = -1;
         
         cout << gateX << " " << gateY << endl;
     }

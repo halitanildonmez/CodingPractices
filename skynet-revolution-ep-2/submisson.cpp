@@ -197,10 +197,7 @@ int main()
                 }
                 if (!foundAMatch) {
                     GatewayNodeAndParent choke2 = getClosestNode (chokes, shortestPaths);
-                    cerr << "Choke point with furthest away dist " << choke2.gatewayNode << " ----- " << choke2.parentNode 
-                         << endl;
                     // we can chill and there is a choke point to cut
-                    GatewayNodeAndParent choke = chokes[0];
                     gateX = choke2.parentNode;
                     gateY = choke2.gatewayNode;    
                 }

@@ -102,6 +102,20 @@ vector<GatewayNodeAndParent> findClosestChokePoint (int ** graph, int gatewayNod
     return chokePoints;
 }
 
+GatewayNodeAndParent getClosestNode (vector<GatewayNodeAndParent> chokePoints, int shortestPaths[]) {
+    int maxDist = 0;
+    GatewayNodeAndParent retVal = chokePoints[0];
+    
+    for (GatewayNodeAndParent cp : chokePoints) {
+        if (shortestPaths[cp.parentNode] >= maxDist) {
+            shortestPaths[cp.parentNode] = maxDist;
+            retVal = cp;
+        }
+    }
+    
+    return retVal;
+}
+
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
@@ -161,7 +175,7 @@ int main()
         cerr << "Dijkstra previous node: " << parentNodeOfGatewayNode << endl;
         
         vector<GatewayNodeAndParent> chokes = findClosestChokePoint(map, gatewayNodes, N, closestGatewayNode);
-        
+
         // TODO: if distance < 2 we need to cut the link to the closest node
         // TODO: if not we need to check the choke points and cut from there
         int gateX, gateY;
@@ -182,10 +196,13 @@ int main()
                     }    
                 }
                 if (!foundAMatch) {
+                    GatewayNodeAndParent choke2 = getClosestNode (chokes, shortestPaths);
+                    cerr << "Choke point with furthest away dist " << choke2.gatewayNode << " ----- " << choke2.parentNode 
+                         << endl;
                     // we can chill and there is a choke point to cut
                     GatewayNodeAndParent choke = chokes[0];
-                    gateX = choke.parentNode;
-                    gateY = choke.gatewayNode;    
+                    gateX = choke2.parentNode;
+                    gateY = choke2.gatewayNode;    
                 }
             }
         }

@@ -8,6 +8,7 @@ using namespace std;
 struct GatewayNodeAndParent {
     int gatewayNode;
     int parentNode;
+    int secondGateNode;
     bool containsClosestNode;
 };
 
@@ -77,6 +78,8 @@ vector<GatewayNodeAndParent> findClosestChokePoint (int ** graph, int gatewayNod
             int count = 0;
             int index = -1;
             int gateNode = -1;
+            int secondGate = -1;
+            
             bool containsClosestNode = false;
             for (int j = 0; j < N; j++) {
                 if (graph[i][j] > 0 && gatewayNodes[j] == 1) {
@@ -87,6 +90,8 @@ vector<GatewayNodeAndParent> findClosestChokePoint (int ** graph, int gatewayNod
                     gateNode = j;
                     if (gateNode == closestNode)
                         containsClosestNode = true;
+                    if (count == 1)
+                        secondGate = j;
                 } // end inner if
             } // end inner for
             if (count >= 2 && count < 4) {
@@ -94,7 +99,7 @@ vector<GatewayNodeAndParent> findClosestChokePoint (int ** graph, int gatewayNod
                 gp.gatewayNode = gateNode;
                 gp.parentNode = index;
                 gp.containsClosestNode = containsClosestNode;
-                
+                gp.secondGateNode = secondGate;
                 chokePoints.push_back(gp);
             }
         } // end if 
@@ -162,11 +167,6 @@ int main()
         
         dijsktra (map, SI, N, shortestPaths, parents);
         
-        /*cerr << " ---- SHORTEST PATHS ---- " << endl;
-        for (int i = 0; i < N; i++)
-            cerr << i << " " << shortestPaths[i] << endl;
-        cerr << " ---- SHORTEST PATHS END ---- " << endl;*/
-        
         int closestGatewayNode = findNodeWithShortestPath (map, shortestPaths, N, gatewayNodes);
         int distanceToClosestNode = shortestPaths[closestGatewayNode];
         int parentNodeOfGatewayNode = parents[closestGatewayNode];
@@ -175,7 +175,50 @@ int main()
         cerr << "Dijkstra previous node: " << parentNodeOfGatewayNode << endl;
         
         vector<GatewayNodeAndParent> chokes = findClosestChokePoint(map, gatewayNodes, N, closestGatewayNode);
-
+        int testMin = 0;
+        int testMax = 500;
+        int selectIndex = -1;
+        int testCount = 0;
+        for (GatewayNodeAndParent gg : chokes) {
+            int hasSome = 0;
+            int turnPrevNeeded = 0;
+            for (int i = 0; i < N; i++) {
+                if (map[gg.gatewayNode][i] == 1 && i != gg.parentNode)
+                    turnPrevNeeded++;
+                if (map[gg.secondGateNode][i] == 1 && i != gg.parentNode)
+                    turnPrevNeeded++;
+                if (map[gg.parentNode][i] == 1) {
+                    hasSome++;
+                    for (int j = 0; j < N; j++) {
+                        if (map[gg.secondGateNode][j] == 1)
+                            hasSome++;
+                        if (map[gg.secondGateNode][j] == 1 && j == gg.parentNode)
+                            hasSome++;
+                    }
+                }
+            }
+            if (hasSome > testMin) {
+                testMin = hasSome;
+                selectIndex = testCount;
+            } else if (hasSome == testMin) {
+                if (selectIndex != -1) {
+                    int dist = shortestPaths[chokes[selectIndex].parentNode];
+                    int newDist = shortestPaths[chokes[testCount].parentNode];
+                    if (newDist < dist) {
+                        selectIndex = testCount;
+                    }
+                }
+            }
+            
+            
+            testCount++;
+            cerr << gg.gatewayNode << " --- Parent node: " << gg.parentNode << " ------ Short path len: " 
+                 << shortestPaths[gg.parentNode] << " ---- Second gate node: " << gg.secondGateNode 
+                 << " ---- Turns needed: " << turnPrevNeeded << " ----- Has some " << hasSome << endl;
+        }
+        if (selectIndex != -1)
+            cerr << "Would have cut " << chokes[selectIndex].parentNode << " ---- " << chokes[selectIndex].gatewayNode 
+                 << endl;
         // TODO: if distance < 2 we need to cut the link to the closest node
         // TODO: if not we need to check the choke points and cut from there
         int gateX, gateY;
@@ -195,11 +238,14 @@ int main()
                         break;
                     }    
                 }
-                if (!foundAMatch) {
+                if (selectIndex != -1) {
+                    gateX = chokes[selectIndex].parentNode;
+                    gateY = chokes[selectIndex].gatewayNode;
+                } else if (!foundAMatch) {
                     GatewayNodeAndParent choke2 = getClosestNode (chokes, shortestPaths);
                     // we can chill and there is a choke point to cut
                     gateX = choke2.parentNode;
-                    gateY = choke2.gatewayNode;    
+                    gateY = choke2.gatewayNode;
                 }
             }
         }

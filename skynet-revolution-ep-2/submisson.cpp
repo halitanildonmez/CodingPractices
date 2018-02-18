@@ -121,6 +121,68 @@ GatewayNodeAndParent getClosestNode (vector<GatewayNodeAndParent> chokePoints, i
     return retVal;
 }
 
+void printClosestStruct (GatewayNodeAndParent cp, int point) {
+    cerr << "NODE: " << cp.parentNode << " ----- " << cp.gatewayNode << " ---- " << cp.secondGateNode 
+         << " ------- " << point << endl;
+}
+
+int getMostCriticalNode (int **map, int N, vector<GatewayNodeAndParent> chokes, int shortPaths[]) {
+    cerr << " ---------------- START -------------- " << endl; 
+    
+    int *arr = new int [chokes.size()];
+    int min = 0;
+    int selectedNodeIndex = -1;
+    
+    bool checkShortestPath = false;
+    
+    for (int i = 0; i < chokes.size(); i++) {
+        int criticalPoint = 0;
+        GatewayNodeAndParent cur = chokes[i];
+        for (int j = 0; j < N; j++) {
+            if (map[cur.parentNode][j] == 1) {
+                for (int k = 0; k < N; k++) {
+                    if (map[cur.secondGateNode][k] == 1 || map[cur.secondGateNode][k] == 1) {
+                        criticalPoint++;
+                    }
+                } // end for k
+            } // end if
+        } // end for j
+        arr[i] = criticalPoint;
+        cerr << cur.parentNode << " ------ " << criticalPoint << endl;
+        if (min <= criticalPoint) {
+            if (min == criticalPoint)
+                checkShortestPath = true;
+            min = criticalPoint;
+            selectedNodeIndex = i;
+            
+        }
+    }
+    
+    if (selectedNodeIndex == -1) {
+        delete [] arr;
+        return -1;   
+    }
+    
+    if (checkShortestPath) {
+        int minDistance = shortPaths[chokes[selectedNodeIndex].parentNode];
+        for (int i = 0; i < chokes.size (); i++) {
+            if (arr[i] == min && i != selectedNodeIndex) {
+                GatewayNodeAndParent cur = chokes[i];
+                if (shortPaths[cur.parentNode] < minDistance) {
+                    selectedNodeIndex = i;
+                    minDistance = shortPaths[cur.parentNode];
+                }
+            }
+        }    
+    }
+    
+    cerr << " ----------------------------- " << endl;
+    delete [] arr;
+    arr = NULL;
+    
+    return selectedNodeIndex;
+}
+
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
@@ -155,8 +217,6 @@ int main()
         gatewayNodes[EI] = 1;
     }
     
-
-    bool isFirstIteration = true;
     int shortestPaths[N];
     int parents[N];
     
@@ -175,52 +235,12 @@ int main()
         cerr << "Dijkstra previous node: " << parentNodeOfGatewayNode << endl;
         
         vector<GatewayNodeAndParent> chokes = findClosestChokePoint(map, gatewayNodes, N, closestGatewayNode);
-        int testMin = 0;
-        int testMax = 500;
-        int selectIndex = -1;
-        int testCount = 0;
-        for (GatewayNodeAndParent gg : chokes) {
-            int hasSome = 0;
-            int turnPrevNeeded = 0;
-            for (int i = 0; i < N; i++) {
-                if (map[gg.gatewayNode][i] == 1 && i != gg.parentNode)
-                    turnPrevNeeded++;
-                if (map[gg.secondGateNode][i] == 1 && i != gg.parentNode)
-                    turnPrevNeeded++;
-                if (map[gg.parentNode][i] == 1) {
-                    hasSome++;
-                    for (int j = 0; j < N; j++) {
-                        if (map[gg.secondGateNode][j] == 1)
-                            hasSome++;
-                        if (map[gg.secondGateNode][j] == 1 && j == gg.parentNode)
-                            hasSome++;
-                    }
-                }
-            }
-            if (hasSome > testMin) {
-                testMin = hasSome;
-                selectIndex = testCount;
-            } else if (hasSome == testMin) {
-                if (selectIndex != -1) {
-                    int dist = shortestPaths[chokes[selectIndex].parentNode];
-                    int newDist = shortestPaths[chokes[testCount].parentNode];
-                    if (newDist < dist) {
-                        selectIndex = testCount;
-                    }
-                }
-            }
-            
-            
-            testCount++;
-            cerr << gg.gatewayNode << " --- Parent node: " << gg.parentNode << " ------ Short path len: " 
-                 << shortestPaths[gg.parentNode] << " ---- Second gate node: " << gg.secondGateNode 
-                 << " ---- Turns needed: " << turnPrevNeeded << " ----- Has some " << hasSome << endl;
+        for (GatewayNodeAndParent test : chokes) {
+            printClosestStruct(test, 0);    
         }
-        if (selectIndex != -1)
-            cerr << "Would have cut " << chokes[selectIndex].parentNode << " ---- " << chokes[selectIndex].gatewayNode 
-                 << endl;
-        // TODO: if distance < 2 we need to cut the link to the closest node
-        // TODO: if not we need to check the choke points and cut from there
+        
+        int testCompareIndex = getMostCriticalNode(map, N, chokes, shortestPaths);
+        
         int gateX, gateY;
         if (distanceToClosestNode < 2) {
             // we need to cut the closest node
@@ -228,25 +248,10 @@ int main()
             gateY = closestGatewayNode;
         } else {
             if (chokes.size() > 0) {
-                bool foundAMatch = false;
-                for (GatewayNodeAndParent gp : chokes) {
-                    if (gp.containsClosestNode) {
-                        cerr << "found a choke point which is a close node " << gp.parentNode << endl;
-                        gateX = gp.parentNode;
-                        gateY = gp.gatewayNode;
-                        foundAMatch = true;
-                        break;
-                    }    
-                }
-                if (selectIndex != -1) {
-                    gateX = chokes[selectIndex].parentNode;
-                    gateY = chokes[selectIndex].gatewayNode;
-                } else if (!foundAMatch) {
-                    GatewayNodeAndParent choke2 = getClosestNode (chokes, shortestPaths);
-                    // we can chill and there is a choke point to cut
-                    gateX = choke2.parentNode;
-                    gateY = choke2.gatewayNode;
-                }
+                if (testCompareIndex != -1) {
+                    gateX = chokes[testCompareIndex].parentNode;
+                    gateY = chokes[testCompareIndex].gatewayNode;
+                } 
             }
         }
         

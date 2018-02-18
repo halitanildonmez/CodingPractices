@@ -141,8 +141,10 @@ int getMostCriticalNode (int **map, int N, vector<GatewayNodeAndParent> chokes, 
         for (int j = 0; j < N; j++) {
             if (map[cur.parentNode][j] == 1) {
                 for (int k = 0; k < N; k++) {
-                    if (map[cur.secondGateNode][k] == 1 || map[cur.secondGateNode][k] == 1) {
+                    if (map[cur.secondGateNode][k] == 1) {
                         criticalPoint++;
+                        if (map[k][cur.parentNode] == 1)
+                            criticalPoint+=2;
                     }
                 } // end for k
             } // end if

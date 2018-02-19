@@ -135,6 +135,8 @@ int getMostCriticalNode (int **map, int N, vector<GatewayNodeAndParent> chokes, 
     
     bool checkShortestPath = false;
     
+    
+    
     for (int i = 0; i < chokes.size(); i++) {
         int criticalPoint = 0;
         GatewayNodeAndParent cur = chokes[i];
@@ -250,7 +252,20 @@ int main()
             gateY = closestGatewayNode;
         } else {
             if (chokes.size() > 0) {
-                if (testCompareIndex != -1) {
+                int minDist = 500;
+                int chokeIndex = -1;
+                for (int i = 0; i < chokes.size (); i++) {
+                    GatewayNodeAndParent tmp = chokes[i];
+                    if (shortestPaths[tmp.parentNode] <= minDist) {
+                        chokeIndex = i;
+                        minDist = shortestPaths[tmp.parentNode];
+                    }
+                }
+                if (minDist < 3) {
+                    gateX = chokes[chokeIndex].parentNode;
+                    gateY = chokes[chokeIndex].gatewayNode;
+                }
+                else if (testCompareIndex != -1) {
                     gateX = chokes[testCompareIndex].parentNode;
                     gateY = chokes[testCompareIndex].gatewayNode;
                 } 

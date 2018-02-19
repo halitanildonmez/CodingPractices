@@ -45,7 +45,6 @@ void dijsktra (int ** graph, int source, int N, int dist[], int parents[]) {
         for (int j = 0; j < N; j++) {
             if (!visited[j] && graph[selectedNode][j] >= 1
                     && distances[selectedNode] + graph[selectedNode][j] < distances[j]) {
-                        
                 parent[j] = selectedNode;
                 distances[j] = graph[selectedNode][j] + distances[selectedNode];
                 
@@ -113,12 +112,39 @@ GatewayNodeAndParent getClosestNode (vector<GatewayNodeAndParent> chokePoints, i
     
     for (GatewayNodeAndParent cp : chokePoints) {
         if (shortestPaths[cp.parentNode] >= maxDist) {
-            shortestPaths[cp.parentNode] = maxDist;
+            maxDist = shortestPaths[cp.parentNode];
             retVal = cp;
         }
     }
     
     return retVal;
+}
+
+int getMostCriticalChokePointIndex (vector<GatewayNodeAndParent> chokePoints, int shortestPaths[], int ** graph, 
+                                    int N, int gatewayNodes[]) {
+    GatewayNodeAndParent tmp;
+    int index = -1;
+    int tmpMin = 0;
+    for (int i = 0; i < chokePoints.size(); i++) {
+        tmp = chokePoints[i];
+        
+        int chokePointDangerDegree = 0;
+        for (int neighOfParentNode = 0; neighOfParentNode < N; neighOfParentNode++) {
+            if (graph[neighOfParentNode][tmp.parentNode] == 1 && neighOfParentNode != tmp.gatewayNode 
+                && neighOfParentNode != tmp.secondGateNode) {
+                
+                if (graph[neighOfParentNode][tmp.gatewayNode] == 1 || graph[neighOfParentNode][tmp.secondGateNode] == 1
+                    || gatewayNodes[neighOfParentNode] > 0) {
+                    chokePointDangerDegree++;
+                }
+            }
+        }
+        if (chokePointDangerDegree >= tmpMin) {
+            tmpMin = chokePointDangerDegree;
+            index = i;
+        }
+    }
+    return index;
 }
 
 void printClosestStruct (GatewayNodeAndParent cp, int point) {
@@ -127,16 +153,12 @@ void printClosestStruct (GatewayNodeAndParent cp, int point) {
 }
 
 int getMostCriticalNode (int **map, int N, vector<GatewayNodeAndParent> chokes, int shortPaths[]) {
-    cerr << " ---------------- START -------------- " << endl; 
     
     int *arr = new int [chokes.size()];
     int min = 0;
     int selectedNodeIndex = -1;
     
     bool checkShortestPath = false;
-    
-    
-    
     for (int i = 0; i < chokes.size(); i++) {
         int criticalPoint = 0;
         GatewayNodeAndParent cur = chokes[i];
@@ -152,7 +174,6 @@ int getMostCriticalNode (int **map, int N, vector<GatewayNodeAndParent> chokes, 
             } // end if
         } // end for j
         arr[i] = criticalPoint;
-        cerr << cur.parentNode << " ------ " << criticalPoint << endl;
         if (min <= criticalPoint) {
             if (min == criticalPoint)
                 checkShortestPath = true;
@@ -179,12 +200,29 @@ int getMostCriticalNode (int **map, int N, vector<GatewayNodeAndParent> chokes, 
             }
         }    
     }
-    
-    cerr << " ----------------------------- " << endl;
     delete [] arr;
     arr = NULL;
     
     return selectedNodeIndex;
+}
+
+int analyzeChokePoint (GatewayNodeAndParent chokePoint, int parents[], int N, int **graph, int gatewayNodes[], int SI) {
+    int curParent = chokePoint.parentNode;
+    int turnNeededToAct = 1;
+    
+    for (int i = 0; i < N; i++) {
+        int par = parents[curParent];
+        
+        for (int j = 0; j < N; j++) {
+            if (graph[j][par] == 1 && gatewayNodes[j] > 0 && j != SI) {
+                turnNeededToAct++;
+            } 
+        }
+        curParent = par;
+        if (curParent == SI)
+            break;
+    }
+    return turnNeededToAct;
 }
 
 /**
@@ -235,14 +273,20 @@ int main()
         int distanceToClosestNode = shortestPaths[closestGatewayNode];
         int parentNodeOfGatewayNode = parents[closestGatewayNode];
         
-        cerr << "Closest gateway node " << closestGatewayNode << " distance to it is " << distanceToClosestNode << endl;
-        cerr << "Dijkstra previous node: " << parentNodeOfGatewayNode << endl;
-        
         vector<GatewayNodeAndParent> chokes = findClosestChokePoint(map, gatewayNodes, N, closestGatewayNode);
-        for (GatewayNodeAndParent test : chokes) {
-            printClosestStruct(test, 0);    
+        GatewayNodeAndParent urgent;
+        bool foundUrgent = false;
+        for (int h = chokes.size() - 1; h >= 0; h--) {
+            GatewayNodeAndParent test = chokes[h];
+            if (analyzeChokePoint (test, parents, N, map, gatewayNodes, SI) == shortestPaths[test.parentNode]) {
+                cerr << "Urgent node found " << test.parentNode << " ---- " << shortestPaths[test.parentNode] <<endl;
+                urgent = test;
+                foundUrgent = true;
+                break;
+            }
         }
         
+        int mostCriticalNodeIndex = getMostCriticalChokePointIndex(chokes, shortestPaths, map, N, gatewayNodes);
         int testCompareIndex = getMostCriticalNode(map, N, chokes, shortestPaths);
         
         int gateX, gateY;
@@ -264,11 +308,19 @@ int main()
                 if (minDist < 3) {
                     gateX = chokes[chokeIndex].parentNode;
                     gateY = chokes[chokeIndex].gatewayNode;
+                } 
+                else if (foundUrgent) {
+                    gateX = urgent.parentNode;
+                    gateY = urgent.gatewayNode;
                 }
+                else if (mostCriticalNodeIndex != -1) {
+                    gateX = chokes[mostCriticalNodeIndex].parentNode;
+                    gateY = chokes[mostCriticalNodeIndex].gatewayNode;
+                } 
                 else if (testCompareIndex != -1) {
                     gateX = chokes[testCompareIndex].parentNode;
                     gateY = chokes[testCompareIndex].gatewayNode;
-                } 
+                }
             }
         }
         

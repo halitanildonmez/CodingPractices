@@ -2,86 +2,227 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <list>
-#include <queue>
+
 using namespace std;
 
-int distToStart (int start, int end, vector<int> adjGraph[], int N, vector<int> nodes, vector<int> gatewayNode, int &p) {
-    int *distances = new int[N];
-    bool *visited = new bool [N];
-    vector <int> prev[N];
+struct GatewayNodeAndParent {
+    int gatewayNode;
+    int parentNode;
+    int secondGateNode;
+    bool containsClosestNode;
+};
+
+int minDistance (int dist[], bool visited[], int N) {
+    int min = 500;
+    int minIndex = -1;
+    for (int i = 0; i < N; i++) {
+        if (!visited[i] && dist[i] <= min) {
+            min = dist[i];
+            minIndex = i;
+        }
+    }
+    return minIndex;
+}
+
+void dijsktra (int ** graph, int source, int N, int dist[], int parents[]) {
+
+    bool visited[N];
+    int distances[N];
+    int parent[N];
+    
     for (int i = 0; i < N; i++) {
         distances[i] = 500;
         visited[i] = false;
+        dist[i] = 0;
+        parents[i] = 0;
     }
     
-    distances [start] = 0;
-
-    while (!nodes.empty()) {
-        int minDist = 500;
-        int curNode = -1;
-        int delIndex = -1;
-        for (int i = 0; i < nodes.size (); i++) {
-            int n = nodes[i];
-            if (distances[n] < minDist && !visited[n]) {
-                curNode = n;
-                minDist = distances[n];
-                delIndex = i;
+    distances[source] = 0;
+    
+    for (int i = 0; i < N-1; i++) {
+        int selectedNode = minDistance (distances, visited, N);
+        visited[selectedNode] = true;
+        for (int j = 0; j < N; j++) {
+            if (!visited[j] && graph[selectedNode][j] >= 1
+                    && distances[selectedNode] + graph[selectedNode][j] < distances[j]) {
+                parent[j] = selectedNode;
+                distances[j] = graph[selectedNode][j] + distances[selectedNode];
+                
+                dist[j] = distances[j];
+                parents[j] = selectedNode;
             }
         }
-        if (delIndex == -1)
-            break;
-        if (curNode == end) {
-            break;
+    }
+}
+
+/**
+ Find the gateway nodes with shortest path
+*/
+int findNodeWithShortestPath (int ** graph, int nodes[], int N, int gateways[]) {
+    int min = 500;
+    int index = -1;
+    for (int i = 0; i < N; i++) {
+        if (min >= nodes[i] && gateways[i] == 1 && nodes[i] > 0) {
+            min = nodes[i];
+            index = i;
         }
-        nodes.erase (nodes.begin () + delIndex);
-        visited[curNode] = true;
-        vector<int> neighs = adjGraph[curNode];
-        int count = 0;
-        int tmpGate = -1;
-        int tmpGateY = -1;
-        for (int nn : neighs) {
-            for (int gateW : gatewayNode) {
-                if (nn == gateW && gateW != tmpGate) {
-                    tmpGate = gateW;
+    }
+    return index;
+}
+
+vector<GatewayNodeAndParent> findClosestChokePoint (int ** graph, int gatewayNodes[], int N, int closestNode) {
+    vector<GatewayNodeAndParent> chokePoints;
+    for (int i = 0; i < N; i++) {
+        if (gatewayNodes[i] != 1) {
+            int count = 0;
+            int index = -1;
+            int gateNode = -1;
+            int secondGate = -1;
+            
+            bool containsClosestNode = false;
+            for (int j = 0; j < N; j++) {
+                if (graph[i][j] > 0 && gatewayNodes[j] == 1) {
                     count++;
+                    // parent of the gate node
+                    index = i;
+                    // gate node. 
+                    gateNode = j;
+                    if (gateNode == closestNode)
+                        containsClosestNode = true;
+                    if (count == 1)
+                        secondGate = j;
+                } // end inner if
+            } // end inner for
+            if (count >= 2 && count < 4) {
+                GatewayNodeAndParent gp;
+                gp.gatewayNode = gateNode;
+                gp.parentNode = index;
+                gp.containsClosestNode = containsClosestNode;
+                gp.secondGateNode = secondGate;
+                chokePoints.push_back(gp);
+            }
+        } // end if 
+    }
+    return chokePoints;
+}
+
+GatewayNodeAndParent getClosestNode (vector<GatewayNodeAndParent> chokePoints, int shortestPaths[]) {
+    int maxDist = 0;
+    GatewayNodeAndParent retVal = chokePoints[0];
+    
+    for (GatewayNodeAndParent cp : chokePoints) {
+        if (shortestPaths[cp.parentNode] >= maxDist) {
+            maxDist = shortestPaths[cp.parentNode];
+            retVal = cp;
+        }
+    }
+    
+    return retVal;
+}
+
+int getMostCriticalChokePointIndex (vector<GatewayNodeAndParent> chokePoints, int shortestPaths[], int ** graph, 
+                                    int N, int gatewayNodes[]) {
+    GatewayNodeAndParent tmp;
+    int index = -1;
+    int tmpMin = 0;
+    for (int i = 0; i < chokePoints.size(); i++) {
+        tmp = chokePoints[i];
+        
+        int chokePointDangerDegree = 0;
+        for (int neighOfParentNode = 0; neighOfParentNode < N; neighOfParentNode++) {
+            if (graph[neighOfParentNode][tmp.parentNode] == 1 && neighOfParentNode != tmp.gatewayNode 
+                && neighOfParentNode != tmp.secondGateNode) {
+                
+                if (graph[neighOfParentNode][tmp.gatewayNode] == 1 || graph[neighOfParentNode][tmp.secondGateNode] == 1
+                    || gatewayNodes[neighOfParentNode] > 0) {
+                    chokePointDangerDegree++;
                 }
             }
         }
-        for (int i = 0; i < neighs.size(); i++) {
-            int newDist = distances[curNode] + 5;
-            if (count > 1 && tmpGate == neighs[i]) {
-                cerr << tmpGate << " ---- " << endl;
-                newDist -= (50*count+1);
-            }
-            if (newDist < distances[neighs[i]]) {
-                distances[neighs[i]] = newDist;
-                prev[neighs[i]].push_back(curNode);
-            }
+        if (chokePointDangerDegree >= tmpMin) {
+            tmpMin = chokePointDangerDegree;
+            index = i;
         }
     }
+    return index;
+}
 
-    int retVal = distances[end];
-    if (prev[end].size () == 0) {
-        delete[]distances;
-        delete[]visited;
-        return 500;
+void printClosestStruct (GatewayNodeAndParent cp, int point) {
+    cerr << "NODE: " << cp.parentNode << " ----- " << cp.gatewayNode << " ---- " << cp.secondGateNode 
+         << " ------- " << point << endl;
+}
+
+int getMostCriticalNode (int **map, int N, vector<GatewayNodeAndParent> chokes, int shortPaths[]) {
+    
+    int *arr = new int [chokes.size()];
+    int min = 0;
+    int selectedNodeIndex = -1;
+    
+    bool checkShortestPath = false;
+    for (int i = 0; i < chokes.size(); i++) {
+        int criticalPoint = 0;
+        GatewayNodeAndParent cur = chokes[i];
+        for (int j = 0; j < N; j++) {
+            if (map[cur.parentNode][j] == 1) {
+                for (int k = 0; k < N; k++) {
+                    if (map[cur.secondGateNode][k] == 1) {
+                        criticalPoint++;
+                        if (map[k][cur.parentNode] == 1)
+                            criticalPoint+=2;
+                    }
+                } // end for k
+            } // end if
+        } // end for j
+        arr[i] = criticalPoint;
+        if (min <= criticalPoint) {
+            if (min == criticalPoint)
+                checkShortestPath = true;
+            min = criticalPoint;
+            selectedNodeIndex = i;
+            
+        }
     }
     
-    p = prev[end][0];
+    if (selectedNodeIndex == -1) {
+        delete [] arr;
+        return -1;   
+    }
+    
+    if (checkShortestPath) {
+        int minDistance = shortPaths[chokes[selectedNodeIndex].parentNode];
+        for (int i = 0; i < chokes.size (); i++) {
+            if (arr[i] == min && i != selectedNodeIndex) {
+                GatewayNodeAndParent cur = chokes[i];
+                if (shortPaths[cur.parentNode] < minDistance) {
+                    selectedNodeIndex = i;
+                    minDistance = shortPaths[cur.parentNode];
+                }
+            }
+        }    
+    }
+    delete [] arr;
+    arr = NULL;
+    
+    return selectedNodeIndex;
+}
+
+int analyzeChokePoint (GatewayNodeAndParent chokePoint, int parents[], int N, int **graph, int gatewayNodes[], int SI) {
+    int curParent = chokePoint.parentNode;
+    int turnNeededToAct = 1;
     
     for (int i = 0; i < N; i++) {
-        vector<int> tmpVexc = prev[i];
-        for (int j = 0; j < tmpVexc.size (); j++) {
-            if (tmpVexc[j] == end) {
-                p = tmpVexc[j];
-                break;
-            }
+        int par = parents[curParent];
+        
+        for (int j = 0; j < N; j++) {
+            if (graph[j][par] == 1 && gatewayNodes[j] > 0 && j != SI) {
+                turnNeededToAct++;
+            } 
         }
+        curParent = par;
+        if (curParent == SI)
+            break;
     }
-    delete[]distances;
-    delete[]visited;
-    return retVal;
+    return turnNeededToAct;
 }
 
 /**
@@ -95,87 +236,97 @@ int main()
     int E; // the number of exit gateways
     cin >> N >> L >> E; cin.ignore();
     
-    bool *visited = new bool [N];
+    int gatewayNodes[N];
     
-    vector<int> adjGraph[N]; 
-    vector<int> gatewayNode;
-    vector<int> nodes (N);
-    int aa[N][N];
+    int **map;
+    map = new int *[N];
+    for(int i = 0; i < N; i++) {
+        map[i] = new int[N];   
+        gatewayNodes[i] = 0;
+    }
+
     for (int i = 0; i < L; i++) {
         int N1; // N1 and N2 defines a link between these nodes
         int N2;
         cin >> N1 >> N2; cin.ignore();
-        adjGraph[N1].push_back(N2);
-        adjGraph[N2].push_back(N1);
-        aa[N1][N2] = 1;
-        aa[N2][N1] = 1;
-        visited[N1] = false;
+        map[N1][N2] = 1;
+        map[N2][N1] = 1;
     }
+    
     for (int i = 0; i < E; i++) {
         int EI; // the index of a gateway node
         cin >> EI; cin.ignore();
-        gatewayNode.push_back(EI);
+        gatewayNodes[EI] = 1;
     }
     
-    for (int i = 0; i < N; i++) {
-        nodes.push_back(i);
-    }
-
+    int shortestPaths[N];
+    int parents[N];
+    
     // game loop
     while (1) {
         int SI; // The index of the node on which the Skynet agent is positioned this turn
         cin >> SI; cin.ignore();
-        int minVal = 500;
-        int gateX = -1;
-        int gateY = -1;
-        int hh = -1;
-        int neighSize = 0;
-        for (int i = 0; i < E; i++) {
-            int gIndex = gatewayNode[i];
-            vector<int> tmpNeihs = adjGraph[gIndex];
-            bool foundGate = false;
-            for (int l = 0; l < tmpNeihs.size (); l++) {
-                if (tmpNeihs[l] == SI && aa[gIndex][SI] == 1 || aa[SI][gIndex] == 1) {
-                    foundGate = true;
-                    gateY = gIndex;
-                    break;
-                }
-            }
-            if (foundGate) {
-                gateX = SI;
-                hh = gateY;
+        
+        dijsktra (map, SI, N, shortestPaths, parents);
+        
+        int closestGatewayNode = findNodeWithShortestPath (map, shortestPaths, N, gatewayNodes);
+        int distanceToClosestNode = shortestPaths[closestGatewayNode];
+        int parentNodeOfGatewayNode = parents[closestGatewayNode];
+        
+        vector<GatewayNodeAndParent> chokes = findClosestChokePoint(map, gatewayNodes, N, closestGatewayNode);
+        GatewayNodeAndParent urgent;
+        bool foundUrgent = false;
+        for (int h = chokes.size() - 1; h >= 0; h--) {
+            GatewayNodeAndParent test = chokes[h];
+            if (analyzeChokePoint (test, parents, N, map, gatewayNodes, SI) == shortestPaths[test.parentNode]) {
+                cerr << "Urgent node found " << test.parentNode << " ---- " << shortestPaths[test.parentNode] <<endl;
+                urgent = test;
+                foundUrgent = true;
                 break;
             }
-            int curVal = distToStart(SI, gatewayNode[i], adjGraph, N, nodes, gatewayNode, gateY);
-            cerr << "CUR VAL " << curVal << " FROM " << SI << " TO " << gatewayNode[i] << endl;
-            if (curVal <= minVal && adjGraph[gatewayNode[i]].size() > 0) {
-                
-                if (adjGraph[gateY].size () >= neighSize && curVal > 0) {
-                    cerr << "HAVE CHOSEN " << gatewayNode[i] << " AMD " << gateY << " WITH POINT " << curVal << endl;
-                    neighSize = adjGraph[gateY].size ();
-                    minVal = curVal;
-                    gateX = gatewayNode[i];
-                    hh = gateY;    
+        }
+        
+        int mostCriticalNodeIndex = getMostCriticalChokePointIndex(chokes, shortestPaths, map, N, gatewayNodes);
+        int testCompareIndex = getMostCriticalNode(map, N, chokes, shortestPaths);
+        
+        int gateX, gateY;
+        if (distanceToClosestNode < 2) {
+            // we need to cut the closest node
+            gateX = parentNodeOfGatewayNode;
+            gateY = closestGatewayNode;
+        } else {
+            if (chokes.size() > 0) {
+                int minDist = 500;
+                int chokeIndex = -1;
+                for (int i = 0; i < chokes.size (); i++) {
+                    GatewayNodeAndParent tmp = chokes[i];
+                    if (shortestPaths[tmp.parentNode] <= minDist) {
+                        chokeIndex = i;
+                        minDist = shortestPaths[tmp.parentNode];
+                    }
                 }
-                else if (curVal < 0) {
-                    neighSize = adjGraph[gateY].size ();
-                    minVal = curVal;
-                    gateX = gatewayNode[i];
-                    hh = gateY;
+                if (minDist < 3) {
+                    gateX = chokes[chokeIndex].parentNode;
+                    gateY = chokes[chokeIndex].gatewayNode;
+                } 
+                else if (foundUrgent) {
+                    gateX = urgent.parentNode;
+                    gateY = urgent.gatewayNode;
                 }
-                else {
-                    cerr << adjGraph[gateY].size () << endl;
+                else if (mostCriticalNodeIndex != -1) {
+                    gateX = chokes[mostCriticalNodeIndex].parentNode;
+                    gateY = chokes[mostCriticalNodeIndex].gatewayNode;
+                } 
+                else if (testCompareIndex != -1) {
+                    gateX = chokes[testCompareIndex].parentNode;
+                    gateY = chokes[testCompareIndex].gatewayNode;
                 }
             }
         }
-        visited [gateY] = true;
         
-        aa[gateX][gateY] = 0;
-        aa[gateY][gateX] = 0;
+        map[gateX][gateY] = -1;
+        map[gateY][gateX] = -1;
         
-        adjGraph[gateX].erase (std::remove(adjGraph[gateX].begin(), adjGraph[gateX].end(), hh), adjGraph[gateX].end());
-        adjGraph[gateY].erase (std::remove(adjGraph[gateY].begin(), adjGraph[gateY].end(), gateX), adjGraph[gateY].end());
-        
-        cout << gateX << " " << hh << endl;
+        cout << gateX << " " << gateY << endl;
     }
 }

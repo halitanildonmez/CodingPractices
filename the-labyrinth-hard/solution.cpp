@@ -5,18 +5,26 @@
 #include <queue>
 using namespace std;
 
+#define RIGHT "RIGHT"
+#define LEFT "LEFT"
+#define UP "UP"
+#define DOWN "DOWN"
+
 int rowNum[] = { -1, 0, 0, 1 };
 int colNum[] = { 0, -1, 1, 0 };
 
 struct Node {
     int row;
     int col;
+    // for BFS
     bool visited;
+    // for random traversal
+    bool random_visited;
     int type;
 };
 
 Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
-    Node startNode = graph[sx][sy];
+    Node startNode = graph[tx][ty];
     queue<Node> q;
     q.push(startNode);
     while (!q.empty()) {
@@ -26,6 +34,7 @@ Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
             // found the control room
             return n;
         }
+        n.visited = true;
         q.pop();
         // traverse the neighbours. Have 4 possible move
         for (int i = 0; i < 4; i++) {
@@ -42,8 +51,38 @@ Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
             }
         }
     }
-    startNode.type = -1;
     return startNode;
+}
+
+string getDirection (Node foundNode, int KR, int KC) {
+    string direction;
+    int rr = foundNode.row - KR;
+    int rc = foundNode.col - KC;
+    if (rr == 0) {
+        // can only be up or down
+        return rc < 0 ? LEFT : RIGHT;
+    } 
+    if (rc == 0) {
+        // can only be left or right
+        return rr < 0 ? UP : DOWN;
+    }
+    return "";
+}
+
+Node findALocationUnTraversed (Node **graph, int R, int C, int KR, int KC) {
+    for (int i = 0; i < 4; i++) {
+        int neigh_row = rowNum[i] + KR;
+        int neigh_col = colNum[i] + KC;
+        if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
+            if (!graph[neigh_row][neigh_col].random_visited && graph[neigh_row][neigh_col].type > 0) {
+                return graph[neigh_row][neigh_col];
+            }
+        }
+    }
+    Node n;
+    n.row = R;
+    n.col = C;
+    return n;
 }
 
 /**
@@ -97,6 +136,8 @@ int main()
         int maxCI = KC + 2 >= C - 1 ? C - 1 : KC + 2;
         
         graph[KR][KC].type = 3; // player location
+        graph[KR][KC].visited = true;
+        graph[KR][KC].random_visited = true;
         for (int i = 0; i < R; i++) {
             string ROW; // C of the characters in '#.TC?' (i.e. one line of the ASCII maze).
             cin >> ROW; cin.ignore();
@@ -117,19 +158,22 @@ int main()
                     graphNode.type = type;
                     graph[i][j] = graphNode;
                 }
+                ROW[KC] = 'A';
             }
-        } 
-        // Write an action using cout. DON'T FORGET THE "<< endl"
-        // To debug: cerr << "Debug messages..." << endl;
+            //cerr << ROW << endl;
+        }
+        
         Node res = BFS_Search(graph, R, C, tx, ty, KR, KC);
-        cerr << res.type << endl;
         if (res.type == 10 && cx == -1 && KR == res.row && KC == res.col) {
             cx = res.row;
             cy = res.col;
-        }
+        } 
         
-        if (cx == -1)
-            cout << "RIGHT" << endl; // Kirk's next move (UP DOWN LEFT or RIGHT).
+        if (cx == -1) {
+            Node randomNode = findALocationUnTraversed (graph, R, C, KR, KC);
+            graph[randomNode.row][randomNode.col].random_visited = true;
+            cout << getDirection(randomNode, KR, KC) << endl; // Kirk's next move (UP DOWN LEFT or RIGHT).   
+        }
         else 
             cout << "LEFT" << endl;
     }

@@ -23,8 +23,21 @@ struct Node {
     int type;
 };
 
+/**
+BFS implementation. Will return the start node if nothing is found.
+
+@param graph graph with nodes
+@param R Row
+@param C Col
+@param tx Start position row
+@param ty Start position col
+@param sx Current position row
+@param sy Current position col
+
+@return Found node. We are looking for the C here.
+*/
 Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
-    Node startNode = graph[tx][ty];
+    Node startNode = graph[sx][sy];
     queue<Node> q;
     q.push(startNode);
     while (!q.empty()) {
@@ -54,6 +67,15 @@ Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
     return startNode;
 }
 
+/**
+Helper method to get the direciton string. 
+
+@param foundNode node we have found doing something (after bfs, random traversal etc)
+@param KR player pos Row
+@param KC player pos Col
+
+@return string either up down left right or none
+*/
 string getDirection (Node foundNode, int KR, int KC) {
     string direction;
     int rr = foundNode.row - KR;
@@ -69,6 +91,11 @@ string getDirection (Node foundNode, int KR, int KC) {
     return "";
 }
 
+/**
+For getting a random node. Rules here will change a lot. lot
+
+TODO: maybe use 'hug the wall logic ?'
+*/
 Node findALocationUnTraversed (Node **graph, int R, int C, int KR, int KC) {
     for (int i = 0; i < 4; i++) {
         int neigh_row = rowNum[i] + KR;
@@ -160,11 +187,11 @@ int main()
                 }
                 ROW[KC] = 'A';
             }
-            //cerr << ROW << endl;
         }
         
         Node res = BFS_Search(graph, R, C, tx, ty, KR, KC);
-        if (res.type == 10 && cx == -1 && KR == res.row && KC == res.col) {
+        if (res.type == 10 && cx == -1) {
+            cerr << "RESULT FOUND" << endl;
             cx = res.row;
             cy = res.col;
         } 
@@ -172,7 +199,7 @@ int main()
         if (cx == -1) {
             Node randomNode = findALocationUnTraversed (graph, R, C, KR, KC);
             graph[randomNode.row][randomNode.col].random_visited = true;
-            cout << getDirection(randomNode, KR, KC) << endl; // Kirk's next move (UP DOWN LEFT or RIGHT).   
+            cout << getDirection(randomNode, KR, KC) << endl;  
         }
         else 
             cout << "LEFT" << endl;

@@ -97,18 +97,19 @@ For getting a random node. Rules here will change a lot. lot
 TODO: maybe use 'hug the wall logic ?'
 */
 Node findALocationUnTraversed (Node **graph, int R, int C, int KR, int KC) {
+    Node n;
+    n.row = R;
+    n.col = C;
     for (int i = 0; i < 4; i++) {
         int neigh_row = rowNum[i] + KR;
         int neigh_col = colNum[i] + KC;
         if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
             if (!graph[neigh_row][neigh_col].random_visited && graph[neigh_row][neigh_col].type > 0) {
-                return graph[neigh_row][neigh_col];
+                n = graph[neigh_row][neigh_col];
+                graph[neigh_row][neigh_col].random_visited = true;
             }
         }
     }
-    Node n;
-    n.row = R;
-    n.col = C;
     return n;
 }
 
@@ -189,19 +190,26 @@ int main()
             }
         }
         
-        Node res = BFS_Search(graph, R, C, tx, ty, KR, KC);
-        if (res.type == 10 && cx == -1) {
-            cerr << "RESULT FOUND" << endl;
-            cx = res.row;
-            cy = res.col;
-        } 
+        if (cx == -1) {
+            // have not found the C yet. So use BFS and keep looking
+            Node res = BFS_Search(graph, R, C, tx, ty, KR, KC);
+            if (res.type == 10) {
+                cerr << "RESULT FOUND" << endl;
+                cx = res.row;
+                cy = res.col;
+            } else {
+                // randomly traverse the graph. We need to discover the map
+                Node randomNode = findALocationUnTraversed (graph, R, C, KR, KC);
+                graph[randomNode.row][randomNode.col].random_visited = true;
+                cout << getDirection(randomNode, KR, KC) << endl;  
+            }
+        }
         
         if (cx == -1) {
-            Node randomNode = findALocationUnTraversed (graph, R, C, KR, KC);
-            graph[randomNode.row][randomNode.col].random_visited = true;
-            cout << getDirection(randomNode, KR, KC) << endl;  
         }
-        else 
-            cout << "LEFT" << endl;
+        else {
+            // run an a* algorthim here 
+            cout << "LEFT" << endl;            
+        }
     }
 }

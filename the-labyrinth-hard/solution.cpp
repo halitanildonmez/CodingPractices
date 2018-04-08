@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 #include <queue>
+#include <map>
+
 using namespace std;
 
 #define RIGHT "RIGHT"
@@ -67,6 +69,17 @@ Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
     return startNode;
 }
 
+int manhattanDistance (int sx, int sy, int gx, int gy) {
+    return abs (sx - gx) + abs (sy - gy);
+}
+
+Node astar_pathfind (Node **graph, int R, int C, int gx, int gy, int sx, int sy) {
+    
+    Node startNode = graph[sx][sy];
+    // TODO: implment this.
+    return startNode;
+}
+
 /**
 Helper method to get the direciton string. 
 
@@ -92,7 +105,7 @@ string getDirection (Node foundNode, int KR, int KC) {
 }
 
 /**
-For getting a random node. Rules here will change a lot. lot
+For getting a random node. Rules here will change a lot. Called when the C is not found. 
 
 TODO: maybe use 'hug the wall logic ?'
 */
@@ -100,6 +113,7 @@ Node findALocationUnTraversed (Node **graph, int R, int C, int KR, int KC) {
     Node n;
     n.row = R;
     n.col = C;
+    bool isFound = false;
     for (int i = 0; i < 4; i++) {
         int neigh_row = rowNum[i] + KR;
         int neigh_col = colNum[i] + KC;

@@ -22,6 +22,8 @@ struct Node {
     bool visited;
     // for random traversal
     bool random_visited;
+    // for second pass random, detect cycles
+    bool random_visited_again;
     int type;
 };
 
@@ -117,12 +119,26 @@ Node findALocationUnTraversed (Node **graph, int R, int C, int KR, int KC) {
     for (int i = 0; i < 4; i++) {
         int neigh_row = rowNum[i] + KR;
         int neigh_col = colNum[i] + KC;
-        if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
-            if (!graph[neigh_row][neigh_col].random_visited && graph[neigh_row][neigh_col].type > 0) {
-                n = graph[neigh_row][neigh_col];
+        if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C) && graph[neigh_row][neigh_col].type > 0) 
+        {
+            Node curNeigh = graph[neigh_row][neigh_col];
+            if (!curNeigh.random_visited && !curNeigh.random_visited_again) {
+                n = curNeigh;
                 graph[neigh_row][neigh_col].random_visited = true;
+                isFound = true;
+                break;
+            } else {
+                // we have marked the path. Cycle detected
+                cerr << "CYCLE DETECTED AT " << KR << " " << KC << endl;
+                if ((curNeigh.random_visited && !curNeigh.random_visited_again)) {
+                    n = curNeigh;
+                    graph[neigh_row][neigh_col].random_visited_again = true;
+                }
             }
         }
+    }
+    if (!isFound) {
+        cerr << "NOT FOUND" << endl;
     }
     return n;
 }
@@ -147,6 +163,8 @@ int main()
             n.row = i;
             n.col = j;
             n.visited = false;
+            n.random_visited = false;
+            n.random_visited_again = false;
             n.type = 0;
             graph[i][j] = n; // assume everything is unknown. All fog 
         }
@@ -214,7 +232,6 @@ int main()
             } else {
                 // randomly traverse the graph. We need to discover the map
                 Node randomNode = findALocationUnTraversed (graph, R, C, KR, KC);
-                graph[randomNode.row][randomNode.col].random_visited = true;
                 cout << getDirection(randomNode, KR, KC) << endl;  
             }
         }

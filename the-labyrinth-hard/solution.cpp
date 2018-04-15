@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <queue>
 #include <map>
-
+#include <set>
 using namespace std;
 
 #define RIGHT "RIGHT"
@@ -25,7 +25,25 @@ struct Node {
     // for second pass random, detect cycles
     bool random_visited_again;
     int type;
+    
+    // a star structs. At the moment, just for test
+    int fScore;
+    int gScore;
+    int prevRow, prevCol;
+    int priority;
+    
+    inline bool operator==(const Node &left) {
+        return row == left.row && col == left.col;
+    }
+    inline bool operator< (const Node &left) const {
+        return left.fScore > fScore;
+    }
 };
+
+// for using with the vector min element
+bool minElemFunction (Node i, Node j) {
+    return i.fScore < j.fScore;
+}
 
 /**
 BFS implementation. Will return the start node if nothing is found.
@@ -75,10 +93,109 @@ int manhattanDistance (int sx, int sy, int gx, int gy) {
     return abs (sx - gx) + abs (sy - gy);
 }
 
+// from 2d to 1D coord. Used to store integer indicies for nodes
+int transformCoord(int x, int y, int width) {
+    return x + (y * width);
+}
+
 Node astar_pathfind (Node **graph, int R, int C, int gx, int gy, int sx, int sy) {
     
     Node startNode = graph[sx][sy];
-    // TODO: implment this.
+    startNode.gScore = 0;
+    startNode.fScore = manhattanDistance(sx,sy,gx,gy);
+    startNode.priority = 0;
+    
+    map <Node, int> cost_sofar;
+    map <Node, Node> came_from;
+    
+    map<Node, int> gScores;
+    map<Node, int> fScores;
+    fScores[startNode] = manhattanDistance(sx,sy,gx,gy);
+    gScores[startNode] = 0;
+    set<Node> closedSet;
+    
+    set<Node> openSet;
+    openSet.insert (startNode);
+    
+    priority_queue<Node> frontier;
+    frontier.push (startNode);
+    
+    while (!openSet.empty ()) {
+        Node cur = (*openSet.begin());
+        if (cur.row == gx && cur.col == gy) {
+            cerr << "FOUND SOMETHING" << endl;
+            set<Node> totalPath;
+             // show content:
+            for (std::map<Node,Node>::iterator it3=came_from.begin(); it3!=came_from.end(); ++it3) {
+                 // show content:
+                Node first = it3->first;
+                Node second = it3->second;
+                cerr << "ASD: " << first.row << " " << first.col << " DEF: " << second.row << " " << second.col << endl;
+                return second;
+            }
+        }
+        set<Node>::iterator it;
+        it = openSet.begin();
+        //cerr << " ---- " << endl;
+        openSet.erase(it);
+        closedSet.insert(cur);
+        
+        // traverse the neighbours. Have 4 possible move
+        for (int i = 0; i < 4; i++) {
+            int neigh_row = rowNum[i] + cur.row;
+            int neigh_col = colNum[i] + cur.col;
+            // be safe. Check the indicies. TODO: should not be needed maybe ?
+            if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
+                Node neigh_val = graph [neigh_row][neigh_col];
+                if (neigh_val.type > 0) {
+                    
+                    std::set<Node>::iterator it;
+                    bool isInClosedSet = false;
+                    for (it = closedSet.begin(); it != closedSet.end(); ++it)
+                    {
+                        Node f = *it; // Note the "*" here
+                        if (f.row == neigh_row && f.col == neigh_col) {
+                            isInClosedSet = true;
+                            break;
+                        }
+                    }
+                    
+                    if(isInClosedSet) {
+                        //cerr << neigh_row << " " << neigh_col << " - " << cur.row  << " " << cur.col << endl; 
+                        continue;
+                    }
+                    
+                    isInClosedSet = false;
+                    for (it = openSet.begin(); it != openSet.end(); ++it)
+                    {
+                        Node f = *it; // Note the "*" here
+                        if (f.row == neigh_row && f.col == neigh_col) {
+                            isInClosedSet = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isInClosedSet) {
+                        //cerr << "not in open set" << endl;
+                        neigh_val.fScore = gScores[neigh_val] + manhattanDistance(neigh_row,neigh_col,gx,gy);
+                        openSet.insert(neigh_val);
+                    }
+                    
+                    int newCost = cur.gScore + 1;
+                    if (newCost >= neigh_val.gScore) {
+                        //cerr << gScores[neigh_val] << endl;
+                        continue;
+                    }
+                    //cerr << "reach here" << endl;
+                    came_from[neigh_val] = cur;
+                    gScores[neigh_val] = newCost;
+                    fScores[neigh_val] = gScores[neigh_val] + manhattanDistance(neigh_row,neigh_col,gx,gy);
+                }
+            }
+        }
+    }
+    
+    cerr << "UNHANDLED" << endl;
     return startNode;
 }
 
@@ -166,6 +283,9 @@ int main()
             n.random_visited = false;
             n.random_visited_again = false;
             n.type = 0;
+            n.fScore = 1000;
+            n.gScore = 1000;
+            n.priority = 0;
             graph[i][j] = n; // assume everything is unknown. All fog 
         }
     }
@@ -237,10 +357,15 @@ int main()
         }
         
         if (cx == -1) {
+            
         }
         else {
-            // run an a* algorthim here 
-            cout << "LEFT" << endl;            
+            // run an a* algorthim here
+            // Node **graph, int R, int C, int gx, int gy, int sx, int sy
+            cerr << "Start: " << tx << " -- " << ty << " Goal: " << cx << " -- " << cy << endl;
+            Node pathNode = astar_pathfind(graph, R, C, cx, cy, tx, ty);
+            cerr << pathNode.row << " - " << pathNode.col << endl;
+            cout << getDirection(pathNode, KR, KC) << endl;   
         }
     }
 }

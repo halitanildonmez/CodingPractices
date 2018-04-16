@@ -98,105 +98,63 @@ int transformCoord(int x, int y, int width) {
     return x + (y * width);
 }
 
-Node astar_pathfind (Node **graph, int R, int C, int gx, int gy, int sx, int sy) {
+int detransformX (int oneDCoord, int W) {
+    return oneDCoord % W;
+}
+
+int detransformY (int oneDCoord, int W) {
+    return oneDCoord / W;
+}
+
+Node astar_pathfind (Node **graph, int R, int C, int gx, int gy, int sx, int sy, map<int, int> &cameFrom) {
+    Node start = graph[sx][sy];
+    int startNodeTransPos = transformCoord (sx, sy, R);
     
-    Node startNode = graph[sx][sy];
-    startNode.gScore = 0;
-    startNode.fScore = manhattanDistance(sx,sy,gx,gy);
-    startNode.priority = 0;
-    
-    map <Node, int> cost_sofar;
-    map <Node, Node> came_from;
-    
-    map<Node, int> gScores;
-    map<Node, int> fScores;
-    fScores[startNode] = manhattanDistance(sx,sy,gx,gy);
-    gScores[startNode] = 0;
     set<Node> closedSet;
+    int *gScores = new int [R*C];
+    for (int i = 0; i < R*C; i++) {
+        gScores[i] = 10000;
+    }
+    gScores[startNodeTransPos] = 0;
     
-    set<Node> openSet;
-    openSet.insert (startNode);
+    priority_queue<Node> pq;
+    start.fScore = manhattanDistance(sx,sy,gx,gy);
+    pq.push(start);
     
-    priority_queue<Node> frontier;
-    frontier.push (startNode);
-    
-    while (!openSet.empty ()) {
-        Node cur = (*openSet.begin());
+    while (!pq.empty()) {
+        Node cur = pq.top ();
         if (cur.row == gx && cur.col == gy) {
-            cerr << "FOUND SOMETHING" << endl;
-            set<Node> totalPath;
-             // show content:
-            for (std::map<Node,Node>::iterator it3=came_from.begin(); it3!=came_from.end(); ++it3) {
-                 // show content:
-                Node first = it3->first;
-                Node second = it3->second;
-                cerr << "ASD: " << first.row << " " << first.col << " DEF: " << second.row << " " << second.col << endl;
-                return second;
-            }
+            cerr << "FOUND SOL" <<endl;
+            int transG = transformCoord(gx,gy,R);
+            int curN = cameFrom[transG];
+            int prevX = detransformX (curN,R);
+            int prevY = detransformY (curN,R);
+            return graph[prevX][prevY];
         }
-        set<Node>::iterator it;
-        it = openSet.begin();
-        //cerr << " ---- " << endl;
-        openSet.erase(it);
-        closedSet.insert(cur);
-        
-        // traverse the neighbours. Have 4 possible move
+        pq.pop();
+         // traverse the neighbours. Have 4 possible move
         for (int i = 0; i < 4; i++) {
             int neigh_row = rowNum[i] + cur.row;
             int neigh_col = colNum[i] + cur.col;
             // be safe. Check the indicies. TODO: should not be needed maybe ?
             if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
-                Node neigh_val = graph [neigh_row][neigh_col];
-                if (neigh_val.type > 0) {
-                    
-                    std::set<Node>::iterator it;
-                    bool isInClosedSet = false;
-                    for (it = closedSet.begin(); it != closedSet.end(); ++it)
-                    {
-                        Node f = *it; // Note the "*" here
-                        if (f.row == neigh_row && f.col == neigh_col) {
-                            isInClosedSet = true;
-                            break;
-                        }
+                Node next = graph [neigh_row][neigh_col];
+                if (next.type > 0) {
+                    int newCost = gScores[transformCoord (cur.row, cur.col, R)] + 1;
+                    if (newCost < gScores[transformCoord (next.row, next.col, R)] ) {
+                        int newF = newCost + manhattanDistance(next.row,next.col,gx,gy);
+                        gScores[transformCoord(next.row, next.col, R)] = newCost;
+                        next.fScore = newF;
+                        pq.push(next);
+                        cameFrom[transformCoord(next.row, next.col, R)] = transformCoord (cur.row, cur.col, R);
                     }
-                    
-                    if(isInClosedSet) {
-                        //cerr << neigh_row << " " << neigh_col << " - " << cur.row  << " " << cur.col << endl; 
-                        continue;
-                    }
-                    
-                    isInClosedSet = false;
-                    for (it = openSet.begin(); it != openSet.end(); ++it)
-                    {
-                        Node f = *it; // Note the "*" here
-                        if (f.row == neigh_row && f.col == neigh_col) {
-                            isInClosedSet = true;
-                            break;
-                        }
-                    }
-                    
-                    if (!isInClosedSet) {
-                        //cerr << "not in open set" << endl;
-                        neigh_val.fScore = gScores[neigh_val] + manhattanDistance(neigh_row,neigh_col,gx,gy);
-                        openSet.insert(neigh_val);
-                    }
-                    
-                    int newCost = cur.gScore + 1;
-                    if (newCost >= neigh_val.gScore) {
-                        //cerr << gScores[neigh_val] << endl;
-                        continue;
-                    }
-                    //cerr << "reach here" << endl;
-                    came_from[neigh_val] = cur;
-                    gScores[neigh_val] = newCost;
-                    fScores[neigh_val] = gScores[neigh_val] + manhattanDistance(neigh_row,neigh_col,gx,gy);
                 }
             }
-        }
+        }       
     }
     
-    cerr << "UNHANDLED" << endl;
-    return startNode;
+    cerr << "EPIC FAIL" << endl;
+    return start;
 }
 
 /**
@@ -297,6 +255,9 @@ int main()
     // control room coordinates. So we do not have to go ver and over again
     int cx = -1;
     int cy = -1;
+    
+    bool isAStarRanOnce = false;
+    map<int, int> cameFrom;
     // game loop
     while (1) {
         int KR; // row where Kirk is located.
@@ -360,12 +321,19 @@ int main()
             
         }
         else {
-            // run an a* algorthim here
-            // Node **graph, int R, int C, int gx, int gy, int sx, int sy
-            cerr << "Start: " << tx << " -- " << ty << " Goal: " << cx << " -- " << cy << endl;
-            Node pathNode = astar_pathfind(graph, R, C, cx, cy, tx, ty);
-            cerr << pathNode.row << " - " << pathNode.col << endl;
-            cout << getDirection(pathNode, KR, KC) << endl;   
+            if (!isAStarRanOnce) {
+                Node pathNode = astar_pathfind(graph, R, C, cx, cy, tx, ty, cameFrom);
+                cout << getDirection(pathNode, KR, KC) << endl;
+                isAStarRanOnce = true;
+            } else {
+                int oneDCur = transformCoord(KR,KC,R);
+                int prevOneD = cameFrom[oneDCur];
+                int prevX = detransformX(prevOneD, R);
+                int prevY = detransformY(prevOneD, R);
+                cerr << KR << " " << KC << " " << prevX << " " << prevY << endl;
+                cout << getDirection(graph[prevX][prevY], KR, KC) << endl;
+            }
+
         }
     }
 }

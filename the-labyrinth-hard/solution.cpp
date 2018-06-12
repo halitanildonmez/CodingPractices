@@ -32,12 +32,12 @@ struct Node {
     int prevRow, prevCol;
     int priority;
     
-    inline bool operator==(const Node &left) {
-        return row == left.row && col == left.col;
-    }
-    inline bool operator< (const Node &left) const {
-        return left.fScore > fScore;
-    }
+	inline bool operator==(const Node &left) {
+		return row == left.row && col == left.col;
+	}
+	inline bool operator< (const Node &left) const {
+		return left.fScore > fScore;
+	}
 };
 
 // for using with the vector min element
@@ -95,7 +95,7 @@ int manhattanDistance (int sx, int sy, int gx, int gy) {
 
 // from 2d to 1D coord. Used to store integer indicies for nodes
 int transformCoord(int x, int y, int width) {
-    return x + (y * width);
+	return x + (y * width);
 }
 
 int detransformX (int oneDCoord, int W) {
@@ -124,11 +124,13 @@ Node astar_pathfind (Node **graph, int R, int C, int gx, int gy, int sx, int sy,
     while (!pq.empty()) {
         Node cur = pq.top ();
         if (cur.row == gx && cur.col == gy) {
-            cerr << "FOUND SOL" <<endl;
+            
             int transG = transformCoord(gx,gy,R);
             int curN = cameFrom[transG];
             int prevX = detransformX (curN,R);
             int prevY = detransformY (curN,R);
+            
+            cerr << "FOUND SOL " << prevX << " -- " << prevY <<endl;
             return graph[prevX][prevY];
         }
         pq.pop();
@@ -257,6 +259,7 @@ int main()
     int cy = -1;
     
     bool isAStarRanOnce = false;
+    bool returnHome = false;
     map<int, int> cameFrom;
     // game loop
     while (1) {
@@ -303,37 +306,46 @@ int main()
             }
         }
         
-        if (cx == -1) {
+        if (cx == -1 && !isAStarRanOnce) {
             // have not found the C yet. So use BFS and keep looking
             Node res = BFS_Search(graph, R, C, tx, ty, KR, KC);
             if (res.type == 10) {
-                cerr << "RESULT FOUND" << endl;
                 cx = res.row;
                 cy = res.col;
+                isAStarRanOnce = true;
+                cerr << "RESULT FOUND " << cx << " --- " << cy << endl;
+                cerr << "Current Position " << KR << " --- " << KC << endl;
             } else {
                 // randomly traverse the graph. We need to discover the map
                 Node randomNode = findALocationUnTraversed (graph, R, C, KR, KC);
-                cout << getDirection(randomNode, KR, KC) << endl;  
+                cout << getDirection(randomNode, KR, KC) << endl;
             }
         }
         
-        if (cx == -1) {
+        if (isAStarRanOnce) {
             
-        }
-        else {
-            if (!isAStarRanOnce) {
-                Node pathNode = astar_pathfind(graph, R, C, cx, cy, tx, ty, cameFrom);
-                cout << getDirection(pathNode, KR, KC) << endl;
-                isAStarRanOnce = true;
-            } else {
-                int oneDCur = transformCoord(KR,KC,R);
-                int prevOneD = cameFrom[oneDCur];
-                int prevX = detransformX(prevOneD, R);
-                int prevY = detransformY(prevOneD, R);
-                cerr << KR << " " << KC << " " << prevX << " " << prevY << endl;
-                cout << getDirection(graph[prevX][prevY], KR, KC) << endl;
+            Node pathNode = astar_pathfind(graph, R, C, cx, cy, KR, KC, cameFrom);
+            if (KR == cx && KC == cy) {
+                returnHome = true;
+                isAStarRanOnce = false;
             }
+            else if (manhattanDistance (pathNode.row, pathNode.col, cx, cy) < 2) {
+                cerr << pathNode.row << " " << pathNode.col << endl;
+                Node tt;
+                tt.row = cx;
+                tt.col = cy;
+                cout << getDirection(tt, pathNode.row, pathNode.col) << endl;
+            }
+            else 
+                cout << getDirection(pathNode, KR, KC) << endl;
+        
+        } 
 
+        if (returnHome) {
+            Node pathNode = astar_pathfind(graph, R, C, KR, KC, tx, ty, cameFrom);
+            cerr << "ASD " << tx << " " << ty << endl;
+            cout << getDirection(pathNode, KR, KC) << endl;
         }
-    }
+
+    } // end while
 }

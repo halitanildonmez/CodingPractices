@@ -26,6 +26,10 @@ struct Node {
     bool random_visited;
     // for second pass random, detect cycles
     bool random_visited_again;
+    
+    bool seen;
+    bool dfs_seen;
+    
     int type;
     
     // a star structs. At the moment, just for test
@@ -119,47 +123,55 @@ int detransformY (int oneDCoord, int W) {
     return oneDCoord / W;
 }
 
-Node find_first_available_neigh (Node parent) {
+Node* find_first_available_neigh (Node parent) {
     if (parent.up != NULL && parent.up->type > 0 && !parent.up->visited)
-        return *parent.up;
+        return parent.up;
     if (parent.down != NULL && parent.down->type > 0 && !parent.down->visited)
-        return *parent.down;
+        return parent.down;
         
     if (parent.left != NULL && parent.left->type > 0 && !parent.left->visited)
-        return *parent.left;
+        return parent.left;
     if (parent.right != NULL && parent.right->type > 0 && !parent.right->visited)
-        return *parent.right;
+        return parent.right;
     cerr << "RETURN NOTHING" << endl;
+    return NULL;
+}
+
+bool isNodeValid (Node *n)
+{
+    if (n == NULL)
+        return false;
+    cerr << "Checking Node validty: " << n->row << " - " << n->col << " - " << n->type << " - " << n->visited << endl;
+    return n->type > 0 && !n->visited;
 }
 
 Node* dfs_algo (Node **graph, Node v) 
 {
-        stack<Node> S;
-        S.push(v);
+    stack<Node> S;
+    S.push(v);
+    
+    while (!S.empty()) {
+        Node cur_node = S.top();
+        S.pop();
         
-        while (!S.empty()) {
-            Node cur_node = S.top();
-            S.pop();
-            
-            if (cur_node.type == 10) {
-                cerr << "DFS FOUND A SOLUTION" << endl;
-                return &cur_node;
-            }
-            
-            if (!cur_node.visited){
-                
-                cur_node.visited = true;
-                Node* adjNodes[] = {cur_node.left, cur_node.right, cur_node.up, cur_node.down};
-                for (int i = 0; i < 4; i++) {
-                    Node *w = adjNodes[i];
-                    if (!w->visited && w->type > 0) {
-                        S.push(*w);
-                    }
+        if (cur_node.type == 10) {
+            cerr << "DFS FOUND A SOLUTION" << endl;
+            return &cur_node;
+        }
+        
+        if (!cur_node.visited){
+            cur_node.visited = true;
+            Node* adjNodes[] = {cur_node.left, cur_node.right, cur_node.up, cur_node.down};
+            for (int i = 0; i < 4; i++) {
+                Node *w = adjNodes[i];
+                if (!w->visited && w->type > 0) {
+                    S.push(*w);
                 }
             }
         }
+    }
 
-        return NULL;
+    return NULL;
 } 
 
 
@@ -267,17 +279,13 @@ string getDirection_vol2 (int startX, int startY, int goalX, int goalY) {
     
     cerr << "RR " << rr << " RC " << rc << endl;
     
-    if (rr <= 0) {
+    if (rr == 0) {
         // can only be up or down
-        if (rc == 0)
-            return DOWN;
-        return rc <= 0 ? LEFT : DOWN;
+        return rc < 0 ? LEFT : RIGHT;
     } 
-    if (rc <= 0) {
-        if (rr == 0)
-            return LEFT;
+    if (rc == 0) {
         // can only be left or right
-        return rr <= 0 ? RIGHT : UP;
+        return rr < 0 ? UP : DOWN;
     }
     return "";
 }
@@ -350,6 +358,7 @@ int main()
             n.visited = false;
             n.random_visited = false;
             n.random_visited_again = false;
+            n.seen = false;
             n.type = 0;
             n.fScore = 1000;
             n.gScore = 1000;
@@ -370,6 +379,7 @@ int main()
     
     bool isAStarRanOnce = false;
     bool returnHome = false;
+    bool found_target = false;
     map<int, int> cameFrom;
     // game loop
     while (1) {
@@ -395,10 +405,12 @@ int main()
         for (int i = 0; i < R; i++) {
             string ROW; // C of the characters in '#.TC?' (i.e. one line of the ASCII maze).
             cin >> ROW; cin.ignore();
-            for (int k = 0; k < C; k++) {
-                int type = -50;
-                char c = ROW[k];
-                if (c == '#') // wall
+            for (int j = 0; j < C; j++) {
+                int type = 0;
+                char c = ROW[j];
+                if (c == '?')
+                    type = -66;
+                else if (c == '#') // wall
                     type = -10;
                 else if (c == '.') // moveable
                     type = 1;
@@ -406,38 +418,158 @@ int main()
                     type = 10;
                 else if (c == 'T') // start position
                     type = 2;
-                graph_int[i][k] = type;
+                else
+                    type = -100;
+                graph_int[i][j] = type;
+                graph[i][j].type = type;
             }
-            
-            bool isA= false;
-            // only range of 5
-            if (i >= minRI && i <= maxRI) {
-                for (int j = minCI; j <= maxCI; j++) {
-                    Node graphNode = graph[i][j];
-                    int type = 0;
-                    char c = ROW[j];
-                    if (c == '#') // wall
-                        type = -10;
-                    else if (c == '.') // moveable
-                        type = 1;
-                    else if (c == 'C') // control room
-                        type = 10;
-                    else if (c == 'T') // start position
-                        type = 2;
-                    else
-                        type = -100;
-                    graphNode.type = type;
-                    graph[i][j] = graphNode;
-                }
-            }
-            string tmpp = ROW;
-            if (i == KR)
-                tmpp[KC] = 'A';
-            cerr << tmpp << endl;
         }
         
+        // FOR DEBUGGING
+        /*
+        for (int i = 0; i < R; i++) 
+        {
+            for (int j = 0; j < C; j++)
+            {
+                cerr << " " << graph[i][j].visited;
+            }
+            cerr << endl;
+        }
+        */
+        // END FOR DEBUGGIN
         
         Node cur_node = graph[KR][KC];
+        graph[KR][KC] = cur_node;
+      
+        string result = "";
+        if (!found_target)
+        {
+            // get the valid neighs for the current position
+            cerr << "Getting the walkable locations for the current position " << KR << " " << KC << endl;
+            int up_x = KR > 0 ? KR - 1 : -1;
+            int down_x = KR < R ? KR + 1 : -1;
+            int up_down_y = KC;
+            
+            int left_right_x = KR;
+            int left_y = KC > 0 ? KC - 1 : -1;
+            int right_y = KC < C ? KC + 1 : -1;
+            
+            int poses[] = {left_right_x, left_y, left_right_x, right_y, up_x, up_down_y, down_x, up_down_y};
+            
+            for (int i = 0; i < 8; i+=2)
+            {
+                int cur_x = poses[i];
+                int cur_y = poses[i+1];
+                if ((!graph[cur_x][cur_y].visited) && (graph[cur_x][cur_y].type == 10 || graph[cur_x][cur_y].type == 1))
+                {
+                    cerr << "Chose to go to " << cur_x << " " << cur_y << endl;
+                    graph[cur_x][cur_y].visited = true;
+                    graph[cur_x][cur_y].parent_row = KR;
+                    graph[cur_x][cur_y].parent_col = KC;
+                    result = getDirection_vol2(KR, KC, cur_x, cur_y);
+                    break;
+                }
+            }
+            if (result == "")
+            {
+                int p_x = graph[KR][KC].parent_row;
+                int p_y = graph[KR][KC].parent_col;
+                graph[p_x][p_y].visited = true;
+                cerr << "No Path available. Backtracking..." << endl;
+                result = getDirection_vol2(KR, KC, p_x, p_y);
+            }
+        }
+        else 
+        {
+            cerr << "Found the target" << endl;
+        }
+        cout << result << endl;
+    } // end while
+}
+/*
+            Node *tt = dfs_algo(graph, graph[KR][KC]);
+            if (tt != NULL)
+            {
+                found_target = true;
+                cerr << tt->row << " " << tt->col << endl;
+                cout << getDirection(*tt, KR, KC) << endl;
+            }
+            else
+            {
+                cerr << graph[KR][KC+1].visited << " RETURN NULL " << KR << " -- " << KC << endl;
+                if (isNodeValid(graph[KR][KC].right))
+                {
+                    graph[KR][KC].right->visited = true;
+                    graph[graph[KR][KC].right->row][graph[KR][KC].right->col].visited = true;
+                    cout << getDirection_vol2(KR, KC, graph[KR][KC].right->row, graph[KR][KC].right->col) << endl;
+                }
+                else if (isNodeValid(graph[KR][KC].left))
+                {
+                    graph[KR][KC].left->visited = true;
+                    graph[graph[KR][KC].left->row][graph[KR][KC].left->col].visited = true;
+                    cout << getDirection_vol2(KR, KC, graph[KR][KC].left->row, graph[KR][KC].left->col) << endl;
+                }
+                else if (isNodeValid(graph[KR][KC].up))
+                {
+                    graph[KR][KC].up->visited = true;
+                    graph[graph[KR][KC].up->row][graph[KR][KC].up->col].visited = true;
+                    cout << getDirection_vol2(KR, KC, graph[KR][KC].up->row, graph[KR][KC].up->col) << endl;
+                }
+                else if (isNodeValid(graph[KR][KC].down))
+                {
+                    graph[KR][KC].down->visited = true;
+                    graph[graph[KR][KC].down->row][graph[KR][KC].down->col].visited = true;
+                    cout << getDirection_vol2(KR, KC, graph[KR][KC].down->row, graph[KR][KC].down->col) << endl;
+                }
+            }
+*/
+/*
+        for (int i = 0; i < R; i++) 
+        {
+            for (int j = 0; j < C; j++)
+            {
+                if (!graph[i][j].seen && graph_int[i][j] > 0) 
+                {
+                    graph[i][j].seen = true;
+                    if (i > 0 && graph_int[i-1][j] > 0)
+                    {     
+                        graph[i][j].up = new Node;
+                        graph[i][j].up->row = i-1;
+                        graph[i][j].up->col = j;
+                        graph[i][j].up->type = graph_int[i-1][j];
+                        graph[i][j].up->visited = graph[i-1][j].visited;
+                    }
+                    if (i < R - 1 && graph_int[i+1][j] > 0){
+                        graph[i][j].down = new Node;
+                        graph[i][j].down->row = i+1;
+                        graph[i][j].down->col = j;
+                        graph[i][j].down->type = graph_int[i+1][j];
+                        graph[i][j].down->visited = graph[i+1][j].visited;
+                        //cerr << "Add down" << endl;
+                    }
+                    if (j > 0 && graph_int[i][j-1] > 0){
+                        graph[i][j].left = new Node;
+                        graph[i][j].left->row = i;
+                        graph[i][j].left->col = j-1;
+                        graph[i][j].left->type = graph_int[i][j-1];
+                        graph[i][j].left->visited = graph[i][j-1].visited;
+                        //cerr << "Add left" << endl;
+                    }
+                    if (j < C - 1 && graph_int[i][j+1] > 0){
+                        graph[i][j].right = new Node;
+                        graph[i][j].right->row = i;
+                        graph[i][j].right->col = j+1;
+                        graph[i][j].right->type = graph_int[i][j+1];
+                        graph[i][j].right->visited = graph[i][j+1].visited;
+                        //cerr << "Add right" << endl;
+                    }    
+                }
+            }
+        }
+
+*/
+/**
+
         if (KR > 0 && graph_int[KR-1][KC] > 0){
             cur_node.up = new Node;
             cur_node.up->row = graph[KR-1][KC].row;
@@ -472,22 +604,6 @@ int main()
             cerr << "Add right" << endl;
         }
         
-        cerr << cur_node.right->row << " -- " << cur_node.right->col << endl;
-        
-        Node *tt = dfs_algo(graph, cur_node);
-        if (tt != NULL)
-            cout << getDirection(*tt, KR, KC) << endl;
-        else{
-            cerr << "RETURN NULL" << endl;
-            
-            cout << getDirection(find_first_available_neigh(cur_node), KR, KC) << endl;
-        }
-    } // end while
-}
-
-
-/**
-
         graph[KR][KC].type = 3; // player location
         graph[KR][KC].visited = true;
         graph[KR][KC].random_visited = true;
@@ -585,8 +701,7 @@ int main()
             {
                 cout << getDirection_vol2(KR, KC, pathNode.row, pathNode.col) << endl;    
             }*/
-            
-        /*}
+/*}
 
 */
 /*

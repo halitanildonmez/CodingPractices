@@ -415,7 +415,13 @@ int main()
                 else if (c == '.') // moveable
                     type = 1;
                 else if (c == 'C') // control room
+                {
+                    cx = R;
+                    cy = C;
+                    cerr << "Found the target at " << cx << " " << cy << endl;
+                    found_target = true;
                     type = 10;
+                }
                 else if (c == 'T') // start position
                     type = 2;
                 else
@@ -444,7 +450,6 @@ int main()
         string result = "";
         if (!found_target)
         {
-            // get the valid neighs for the current position
             cerr << "Getting the walkable locations for the current position " << KR << " " << KC << endl;
             int up_x = KR > 0 ? KR - 1 : -1;
             int down_x = KR < R ? KR + 1 : -1;
@@ -460,6 +465,7 @@ int main()
             {
                 int cur_x = poses[i];
                 int cur_y = poses[i+1];
+                
                 if ((!graph[cur_x][cur_y].visited) && (graph[cur_x][cur_y].type == 10 || graph[cur_x][cur_y].type == 1))
                 {
                     cerr << "Chose to go to " << cur_x << " " << cur_y << endl;
@@ -472,16 +478,16 @@ int main()
             }
             if (result == "")
             {
+                cerr << "No Path available. Backtracking..." << endl;
                 int p_x = graph[KR][KC].parent_row;
                 int p_y = graph[KR][KC].parent_col;
                 graph[p_x][p_y].visited = true;
-                cerr << "No Path available. Backtracking..." << endl;
                 result = getDirection_vol2(KR, KC, p_x, p_y);
             }
         }
         else 
         {
-            cerr << "Found the target" << endl;
+            cerr << "Found the target " << endl;
         }
         cout << result << endl;
     } // end while

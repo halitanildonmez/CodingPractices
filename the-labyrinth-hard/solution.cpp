@@ -5,7 +5,8 @@
 #include <queue>
 #include <map>
 #include <set>
-#include <stack>          
+#include <stack>
+#include <list>
 
 using namespace std;
 
@@ -41,6 +42,9 @@ struct Node {
     int parent_row;
     int parent_col;
     
+    int bfs_came_from_x;
+    int bfs_came_from_y;
+    
 	inline bool operator==(const Node &left) {
 		return row == left.row && col == left.col;
 	}
@@ -68,14 +72,12 @@ BFS implementation. Will return the start node if nothing is found.
 @param graph graph with nodes
 @param R Row
 @param C Col
-@param tx Start position row
-@param ty Start position col
 @param sx Current position row
 @param sy Current position col
 
 @return Found node. We are looking for the C here.
 */
-Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
+Node BFS_Search (Node **graph, int R, int C, int sx, int sy) {
     Node startNode = graph[sx][sy];
     queue<Node> q;
     q.push(startNode);
@@ -84,9 +86,10 @@ Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
         int val = n.type;
         if (val == 10) {
             // found the control room
+            cerr << "BFS found the solution at " << n.row << " - " << n.col << endl;
             return n;
         }
-        n.visited = true;
+        n.random_visited = true;
         q.pop();
         // traverse the neighbours. Have 4 possible move
         for (int i = 0; i < 4; i++) {
@@ -95,9 +98,13 @@ Node BFS_Search (Node **graph, int R, int C, int tx, int ty, int sx, int sy) {
             // be safe. Check the indicies. TODO: should not be needed maybe ?
             if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
                 Node neigh_val = graph [neigh_row][neigh_col];
-                if (!neigh_val.visited && neigh_val.type > 0) {
-                    graph [neigh_row][neigh_col].visited = true;
-                    neigh_val.visited = true;
+                if (!neigh_val.random_visited && neigh_val.type > 0) {
+                    graph [neigh_row][neigh_col].random_visited = true;
+                    graph [neigh_row][neigh_col].bfs_came_from_x = n.row;
+                    graph [neigh_row][neigh_col].bfs_came_from_y = n.col;
+                    neigh_val.random_visited = true;
+                    neigh_val.bfs_came_from_x = n.row;
+                    neigh_val.bfs_came_from_y = n.col;
                     q.push(neigh_val);
                 }
             }
@@ -365,6 +372,8 @@ int main()
             n.priority = 0;
             n.parent_row = -1;
             n.parent_col = -1;
+            n.bfs_came_from_x = -1;
+            n.bfs_came_from_y = -1;
             graph[i][j] = n; // assume everything is unknown. All fog 
         }
     }
@@ -380,7 +389,9 @@ int main()
     bool isAStarRanOnce = false;
     bool returnHome = false;
     bool found_target = false;
+    bool run_BFS_to_target = false;
     map<int, int> cameFrom;
+    list<Node> bfs_path;
     // game loop
     while (1) {
         int KR; // row where Kirk is located.
@@ -401,7 +412,7 @@ int main()
         
         graph[KR][KC].type = 3; // player location
         graph[KR][KC].visited = true;
-        graph[KR][KC].random_visited = true;
+        
         for (int i = 0; i < R; i++) {
             string ROW; // C of the characters in '#.TC?' (i.e. one line of the ASCII maze).
             cin >> ROW; cin.ignore();
@@ -444,23 +455,26 @@ int main()
         */
         // END FOR DEBUGGIN
         
-        Node cur_node = graph[KR][KC];
-        graph[KR][KC] = cur_node;
-      
         string result = "";
-        if (!found_target)
+        
+        int up_x = KR > 0 ? KR - 1 : -1;
+        int down_x = KR < R ? KR + 1 : -1;
+        int up_down_y = KC;
+            
+        int left_right_x = KR;
+        int left_y = KC > 0 ? KC - 1 : -1;
+        int right_y = KC < C ? KC + 1 : -1;
+        
+        int poses[] = {left_right_x, left_y, left_right_x, right_y, up_x, up_down_y, down_x, up_down_y};
+        
+        if (cx != -1 && cy != -1 && cx == KR && cy == KC)
+        {
+            cerr << "We are at the target so we should return home..." << endl;
+            
+        }
+        else if (!found_target)
         {
             cerr << "Getting the walkable locations for the current position " << KR << " " << KC << endl;
-            int up_x = KR > 0 ? KR - 1 : -1;
-            int down_x = KR < R ? KR + 1 : -1;
-            int up_down_y = KC;
-            
-            int left_right_x = KR;
-            int left_y = KC > 0 ? KC - 1 : -1;
-            int right_y = KC < C ? KC + 1 : -1;
-            
-            int poses[] = {left_right_x, left_y, left_right_x, right_y, up_x, up_down_y, down_x, up_down_y};
-            
             for (int i = 0; i < 8; i+=2)
             {
                 int cur_x = poses[i];
@@ -487,7 +501,22 @@ int main()
         }
         else 
         {
-            cerr << "Found the target " << endl;
+            cerr << "Found the target. Runnning BFS to go to the control room..." << endl;
+            if (!run_BFS_to_target)
+            {
+                BFS_Search (graph, R, C, KR, KC);
+                cerr << "Ran the BFS so we have an updated data now" << endl;
+                run_BFS_to_target = true;
+                /*
+                  # Continue until you reach root meta data (i.e. (None, None))
+                  while meta[state][0] is not None:
+                    state, action = meta[state]
+                    action_list.append(action)
+                  
+                  action_list.reverse()
+                  return action_list
+                */
+            }
         }
         cout << result << endl;
     } // end while

@@ -391,7 +391,7 @@ int main()
     bool found_target = false;
     bool run_BFS_to_target = false;
     map<int, int> cameFrom;
-    list<Node> bfs_path;
+    stack<Node> bfs_path;
     // game loop
     while (1) {
         int KR; // row where Kirk is located.
@@ -427,8 +427,8 @@ int main()
                     type = 1;
                 else if (c == 'C') // control room
                 {
-                    cx = R;
-                    cy = C;
+                    cx = i;
+                    cy = j;
                     cerr << "Found the target at " << cx << " " << cy << endl;
                     found_target = true;
                     type = 10;
@@ -507,6 +507,43 @@ int main()
                 BFS_Search (graph, R, C, KR, KC);
                 cerr << "Ran the BFS so we have an updated data now" << endl;
                 run_BFS_to_target = true;
+                if (bfs_path.empty())
+                {
+                            cerr <<"tmp2 1 " << cx << " -- " << cy <<endl;
+                    Node current_node = graph[cx][cy];
+                    cerr <<"tmp2"<<endl;
+                    for (int i = 0; i < 4; i++) {
+                        int neigh_row = rowNum[i] + current_node.row;
+                        int neigh_col = colNum[i] + current_node.col;
+                        Node mpt = graph[neigh_row][neigh_col];
+                        cerr << mpt.bfs_came_from_x<<endl;
+                        if (((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) && mpt.bfs_came_from_x != -1 && mpt.bfs_came_from_y != -1)
+                        {
+                    
+                            current_node = mpt;
+                            break;
+                        }
+                    }
+                    while (current_node.bfs_came_from_x != -1 && current_node.bfs_came_from_y != -1)
+                    {
+                        cerr << "test" << endl;
+                        bfs_path.push(current_node);
+                        int t_x = current_node.bfs_came_from_x;
+                        int t_y = current_node.bfs_came_from_y;
+                        current_node = graph[t_x][t_y];
+                    }
+                    cerr << "Done adding to the list"<< endl;
+                    current_node = bfs_path.top();
+                    bfs_path.pop();
+                    result = getDirection_vol2(KR, KC, current_node.row, current_node.col);    
+                }
+                else
+                {
+                    cerr << "list is already populated"<<endl;
+                    Node current_node = bfs_path.top();
+                    bfs_path.pop();
+                    result = getDirection_vol2(KR, KC, current_node.row, current_node.col); 
+                }
                 /*
                   # Continue until you reach root meta data (i.e. (None, None))
                   while meta[state][0] is not None:

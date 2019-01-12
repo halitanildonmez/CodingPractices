@@ -77,17 +77,28 @@ BFS implementation. Will return the start node if nothing is found.
 
 @return Found node. We are looking for the C here.
 */
-Node BFS_Search (Node **graph, int R, int C, int sx, int sy) {
+list<Node> BFS_Search (Node **graph, int R, int C, int sx, int sy, int gx, int gy) 
+{
+    Node parents[R][C];
+    list<Node> bfs_path;
+    
     Node startNode = graph[sx][sy];
     queue<Node> q;
     q.push(startNode);
     while (!q.empty()) {
         Node n = q.front();
-        int val = n.type;
-        if (val == 10) {
+        if (n.row == gx && n.col == gy) {
             // found the control room
-            cerr << "BFS found the solution at " << n.row << " - " << n.col << endl;
-            return n;
+            Node current_node = parents[n.row][n.col];
+            bfs_path.push_back(n);
+            cerr << "BFS found the solution at " << n.row << " - " << n.col  <<  " " << sx << endl;
+            while (current_node.row != sx || current_node.col != sy)
+            {
+                cerr << "Reconstructing path" << endl;
+                bfs_path.push_back(current_node);
+                current_node = parents[current_node.row][current_node.col];
+            }
+            return bfs_path;
         }
         n.random_visited = true;
         q.pop();
@@ -106,11 +117,13 @@ Node BFS_Search (Node **graph, int R, int C, int sx, int sy) {
                     neigh_val.bfs_came_from_x = n.row;
                     neigh_val.bfs_came_from_y = n.col;
                     q.push(neigh_val);
+                    
+                    parents[neigh_row][neigh_col] = n;
                 }
             }
         }
     }
-    return startNode;
+    return bfs_path;
 }
 
 int manhattanDistance (int sx, int sy, int gx, int gy) {
@@ -353,6 +366,7 @@ int main()
     cin >> R >> C >> A; cin.ignore();
     
     int graph_int[R][C];
+    Node parents[R][C];
 
     // TODO: Maybe graph should be of Nodes. So that the check for visited can be done easier 
     Node ** graph = new Node *[R];
@@ -392,6 +406,9 @@ int main()
     bool run_BFS_to_target = false;
     map<int, int> cameFrom;
     stack<Node> bfs_path;
+    
+    list<Node> constructed_path;
+    
     // game loop
     while (1) {
         int KR; // row where Kirk is located.
@@ -403,12 +420,6 @@ int main()
             tx = KR;
             ty = KC;
         }
-        
-        // min row and max row col indicies. It is a 5x5 square with current position in center
-        int minRI = KR - 2 <= 0 ? 0 : KR - 2;
-        int maxRI = KR + 2 >= R - 1 ? R : KR + 2;
-        int minCI = KC - 2 <= 0 ? 0 : KC - 2;
-        int maxCI = KC + 2 >= C - 1 ? C - 1 : KC + 2;
         
         graph[KR][KC].type = 3; // player location
         graph[KR][KC].visited = true;
@@ -442,6 +453,12 @@ int main()
             }
         }
         
+        if (cx != -1 && cy != -1 && cx == KR && cy == KC)
+        {
+            cerr << "We are at the target so we should return home..." << endl;
+            returnHome = true;
+        }
+        
         // FOR DEBUGGING
         /*
         for (int i = 0; i < R; i++) 
@@ -467,10 +484,10 @@ int main()
         
         int poses[] = {left_right_x, left_y, left_right_x, right_y, up_x, up_down_y, down_x, up_down_y};
         
-        if (cx != -1 && cy != -1 && cx == KR && cy == KC)
+        if (returnHome)
         {
-            cerr << "We are at the target so we should return home..." << endl;
-            
+            Node tmp = parents[KR][KC];
+            result = getDirection_vol2(KR, KC, tmp.row, tmp.col);
         }
         else if (!found_target)
         {
@@ -487,6 +504,7 @@ int main()
                     graph[cur_x][cur_y].parent_row = KR;
                     graph[cur_x][cur_y].parent_col = KC;
                     result = getDirection_vol2(KR, KC, cur_x, cur_y);
+                    parents[cur_x][cur_y] = graph[KR][KC];
                     break;
                 }
             }
@@ -497,6 +515,7 @@ int main()
                 int p_y = graph[KR][KC].parent_col;
                 graph[p_x][p_y].visited = true;
                 result = getDirection_vol2(KR, KC, p_x, p_y);
+                parents[p_x][p_y] = graph[KR][KC];
             }
         }
         else 
@@ -504,45 +523,16 @@ int main()
             cerr << "Found the target. Runnning BFS to go to the control room..." << endl;
             if (!run_BFS_to_target)
             {
-                BFS_Search (graph, R, C, KR, KC);
+                constructed_path = BFS_Search (graph, R, C, KR, KC, cx, cy);
                 cerr << "Ran the BFS so we have an updated data now" << endl;
                 run_BFS_to_target = true;
-                if (bfs_path.empty())
+                if (!constructed_path.empty())
                 {
-                            cerr <<"tmp2 1 " << cx << " -- " << cy <<endl;
-                    Node current_node = graph[cx][cy];
-                    cerr <<"tmp2"<<endl;
-                    for (int i = 0; i < 4; i++) {
-                        int neigh_row = rowNum[i] + current_node.row;
-                        int neigh_col = colNum[i] + current_node.col;
-                        Node mpt = graph[neigh_row][neigh_col];
-                        cerr << mpt.bfs_came_from_x<<endl;
-                        if (((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) && mpt.bfs_came_from_x != -1 && mpt.bfs_came_from_y != -1)
-                        {
-                    
-                            current_node = mpt;
-                            break;
-                        }
-                    }
-                    while (current_node.bfs_came_from_x != -1 && current_node.bfs_came_from_y != -1)
-                    {
-                        cerr << "test" << endl;
-                        bfs_path.push(current_node);
-                        int t_x = current_node.bfs_came_from_x;
-                        int t_y = current_node.bfs_came_from_y;
-                        current_node = graph[t_x][t_y];
-                    }
-                    cerr << "Done adding to the list"<< endl;
-                    current_node = bfs_path.top();
-                    bfs_path.pop();
-                    result = getDirection_vol2(KR, KC, current_node.row, current_node.col);    
-                }
-                else
-                {
-                    cerr << "list is already populated"<<endl;
-                    Node current_node = bfs_path.top();
-                    bfs_path.pop();
-                    result = getDirection_vol2(KR, KC, current_node.row, current_node.col); 
+                    cerr << "finding a value and getting a path " << endl;
+                    Node cur_path = constructed_path.back();
+                    constructed_path.pop_back();
+                    result = getDirection_vol2(KR, KC, cur_path.row, cur_path.col);
+                    parents[cur_path.row][cur_path.col] = graph[KR][KC];
                 }
                 /*
                   # Continue until you reach root meta data (i.e. (None, None))
@@ -554,11 +544,28 @@ int main()
                   return action_list
                 */
             }
+            else
+            {
+                if (!constructed_path.empty())
+                {
+                    cerr << "finding a value and getting a path " << endl;
+                    Node cur_path = constructed_path.back();
+                    constructed_path.pop_back();
+                    result = getDirection_vol2(KR, KC, cur_path.row, cur_path.col);
+                    parents[cur_path.row][cur_path.col] = graph[KR][KC];
+                }              
+            }
         }
         cout << result << endl;
     } // end while
 }
+
 /*
+        // min row and max row col indicies. It is a 5x5 square with current position in center
+        int minRI = KR - 2 <= 0 ? 0 : KR - 2;
+        int maxRI = KR + 2 >= R - 1 ? R : KR + 2;
+        int minCI = KC - 2 <= 0 ? 0 : KC - 2;
+        int maxCI = KC + 2 >= C - 1 ? C - 1 : KC + 2;
             Node *tt = dfs_algo(graph, graph[KR][KC]);
             if (tt != NULL)
             {

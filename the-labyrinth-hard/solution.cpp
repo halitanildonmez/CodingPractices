@@ -60,10 +60,9 @@ struct Node {
 	Node *down;
 };
 
-
-// for using with the vector min element
-bool minElemFunction (Node i, Node j) {
-    return i.fScore < j.fScore;
+bool isNeighbourvisited (Node n, bool returnBfs) 
+{
+    return returnBfs ? n.random_visited_again : n.random_visited;
 }
 
 /**
@@ -77,8 +76,10 @@ BFS implementation. Will return the start node if nothing is found.
 
 @return Found node. We are looking for the C here.
 */
-list<Node> BFS_Search (Node **graph, int R, int C, int sx, int sy, int gx, int gy) 
+list<Node> BFS_Search (Node **graph, int R, int C, int sx, int sy, int gx, int gy, bool returnBfs) 
 {
+    cerr << sx << " " << sy << " " << gx << " " << gy << endl;
+    
     Node parents[R][C];
     list<Node> bfs_path;
     
@@ -91,10 +92,9 @@ list<Node> BFS_Search (Node **graph, int R, int C, int sx, int sy, int gx, int g
             // found the control room
             Node current_node = parents[n.row][n.col];
             bfs_path.push_back(n);
-            cerr << "BFS found the solution at " << n.row << " - " << n.col  <<  " " << sx << endl;
+            cerr << "BFS found the solution at " << n.row << " - " << n.col << endl;
             while (current_node.row != sx || current_node.col != sy)
             {
-                cerr << "Reconstructing path" << endl;
                 bfs_path.push_back(current_node);
                 current_node = parents[current_node.row][current_node.col];
             }
@@ -109,11 +109,19 @@ list<Node> BFS_Search (Node **graph, int R, int C, int sx, int sy, int gx, int g
             // be safe. Check the indicies. TODO: should not be needed maybe ?
             if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
                 Node neigh_val = graph [neigh_row][neigh_col];
-                if (!neigh_val.random_visited && neigh_val.type > 0) {
-                    graph [neigh_row][neigh_col].random_visited = true;
+                if (!isNeighbourvisited(neigh_val, returnBfs) && neigh_val.type > 0) {
                     graph [neigh_row][neigh_col].bfs_came_from_x = n.row;
                     graph [neigh_row][neigh_col].bfs_came_from_y = n.col;
-                    neigh_val.random_visited = true;
+                    if (returnBfs)
+                    {
+                        graph [neigh_row][neigh_col].random_visited_again = true;
+                        neigh_val.random_visited_again = true;                        
+                    }
+                    else
+                    {
+                        graph [neigh_row][neigh_col].random_visited = true;
+                        neigh_val.random_visited = true;
+                    }
                     neigh_val.bfs_came_from_x = n.row;
                     neigh_val.bfs_came_from_y = n.col;
                     q.push(neigh_val);
@@ -124,146 +132,6 @@ list<Node> BFS_Search (Node **graph, int R, int C, int sx, int sy, int gx, int g
         }
     }
     return bfs_path;
-}
-
-int manhattanDistance (int sx, int sy, int gx, int gy) {
-    return abs (sx - gx) + abs (sy - gy);
-}
-
-// from 2d to 1D coord. Used to store integer indicies for nodes
-int transformCoord(int x, int y, int width) {
-	return x + (y * width);
-}
-
-int detransformX (int oneDCoord, int W) {
-    return oneDCoord % W;
-}
-
-int detransformY (int oneDCoord, int W) {
-    return oneDCoord / W;
-}
-
-Node* find_first_available_neigh (Node parent) {
-    if (parent.up != NULL && parent.up->type > 0 && !parent.up->visited)
-        return parent.up;
-    if (parent.down != NULL && parent.down->type > 0 && !parent.down->visited)
-        return parent.down;
-        
-    if (parent.left != NULL && parent.left->type > 0 && !parent.left->visited)
-        return parent.left;
-    if (parent.right != NULL && parent.right->type > 0 && !parent.right->visited)
-        return parent.right;
-    cerr << "RETURN NOTHING" << endl;
-    return NULL;
-}
-
-bool isNodeValid (Node *n)
-{
-    if (n == NULL)
-        return false;
-    cerr << "Checking Node validty: " << n->row << " - " << n->col << " - " << n->type << " - " << n->visited << endl;
-    return n->type > 0 && !n->visited;
-}
-
-Node* dfs_algo (Node **graph, Node v) 
-{
-    stack<Node> S;
-    S.push(v);
-    
-    while (!S.empty()) {
-        Node cur_node = S.top();
-        S.pop();
-        
-        if (cur_node.type == 10) {
-            cerr << "DFS FOUND A SOLUTION" << endl;
-            return &cur_node;
-        }
-        
-        if (!cur_node.visited){
-            cur_node.visited = true;
-            Node* adjNodes[] = {cur_node.left, cur_node.right, cur_node.up, cur_node.down};
-            for (int i = 0; i < 4; i++) {
-                Node *w = adjNodes[i];
-                if (!w->visited && w->type > 0) {
-                    S.push(*w);
-                }
-            }
-        }
-    }
-
-    return NULL;
-} 
-
-
-
-Node astar_pathfind (Node **graph, int R, int C, int gx, int gy, int sx, int sy, map<int, int> &cameFrom, bool return_start) {
-    Node start = graph[sx][sy];
-    int startNodeTransPos = transformCoord (sx, sy, R);
-    
-    set<Node> closedSet;
-    int *gScores = new int [R*C];
-    for (int i = 0; i < R*C; i++) {
-        gScores[i] = 10000;
-    }
-    gScores[startNodeTransPos] = 0;
-    
-    priority_queue<Node> pq;
-    start.fScore = manhattanDistance(sx,sy,gx,gy);
-    pq.push(start);
-    
-    while (!pq.empty()) {
-        Node cur = pq.top ();
-        if (cur.row == gx && cur.col == gy) {
-            int transG = transformCoord(gx,gy,R);
-            int curN = cameFrom[transG];
-            int prevX = detransformX (curN,R);
-            int prevY = detransformY (curN,R);
-            
-            cerr << "FOUND SOL " << prevX << " -- " << prevY << " " << gx <<  "  " << gy << endl;
-            return graph[prevX][prevY];
-        }
-        pq.pop();
-         // traverse the neighbours. Have 4 possible move
-        for (int i = 0; i < 4; i++) {
-            int neigh_row = rowNum[i] + cur.row;
-            int neigh_col = colNum[i] + cur.col;
-            // be safe. Check the indicies. TODO: should not be needed maybe ?
-            if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C)) {
-                Node next = graph [neigh_row][neigh_col];
-                if (next.type > 0) {
-                    int newCost = next.gScore + 1;//gScores[transformCoord (cur.row, cur.col, R)] + 1;
-                    next.fScore = next.gScore + manhattanDistance(next.row,next.col,gx,gy);
-                    
-                    for (int i = 0; i < 4; i++) {
-                        int neigh_row_2 = rowNum[i] + next.row;
-                        int neigh_col_2 = colNum[i] + next.col;
-                        // be safe. Check the indicies. TODO: should not be needed maybe ?
-                        if ((neigh_row_2 >= 0 && neigh_row_2 < R) && (neigh_col_2 >= 0 && neigh_col_2 < C)) {
-                            Node next_2 = graph [neigh_row_2][neigh_col_2];
-                            if (next.type > 0 && next_2 == next && next_2.gScore > next.gScore) {
-                                continue;
-                            }
-                            
-                        }
-                    }           
-                    
-                    if (newCost > next.gScore) {
-                    //if (newCost < gScores[transformCoord (next.row, next.col, R)] ) {
-                        int newF = newCost + manhattanDistance(next.row,next.col,gx,gy);
-                        gScores[transformCoord(next.row, next.col, R)] = newCost;
-                        
-                        next.parent = &cur;
-                        
-                        pq.push(next);
-                        cameFrom[transformCoord(next.row, next.col, R)] = transformCoord (cur.row, cur.col, R);
-                    }
-                }
-            }
-        }       
-    }
-    
-    cerr << "EPIC FAIL" << endl;
-    return start;
 }
 
 /**
@@ -309,50 +177,6 @@ string getDirection_vol2 (int startX, int startY, int goalX, int goalY) {
     }
     return "";
 }
-
-/**
-For getting a random node. Rules here will change a lot. Called when the C is not found. 
-
-TODO: maybe use 'hug the wall logic ?'
-*/
-Node findALocationUnTraversed (Node **graph, int R, int C, int KR, int KC) {
-    Node n;
-    n.row = R;
-    n.col = C;
-    bool isFound = false;
-    for (int i = 0; i < 4; i++) {
-        int neigh_row = rowNum[i] + KR;
-        int neigh_col = colNum[i] + KC;
-        if ((neigh_row >= 0 && neigh_row < R) && (neigh_col >= 0 && neigh_col < C) && graph[neigh_row][neigh_col].type > 0) 
-        {
-            Node curNeigh = graph[neigh_row][neigh_col];
-            if (!curNeigh.random_visited && !curNeigh.random_visited_again) {
-                n = curNeigh;
-                graph[neigh_row][neigh_col].random_visited = true;
-                isFound = true;
-                break;
-            } else {
-                // we have marked the path. Cycle detected
-                cerr << "CYCLE DETECTED AT " << KR << " " << KC << endl;
-                if ((curNeigh.random_visited && !curNeigh.random_visited_again)) {
-                    n = curNeigh;
-                    graph[neigh_row][neigh_col].random_visited_again = true;
-                }
-            }
-        }
-    }
-    if (!isFound) {
-        cerr << "NOT FOUND" << endl;
-    }
-    return n;
-}
-
-void convertFrom1dTo2D (int i, int width, int* x, int* y)
-{
-    *x = i % width;    // % is the "modulo operator", the remainder of i / width;
-    *y = i / width;    // where "/" is an integer division
-}
-
 
 /**
  * Auto-generated code below aims at helping you parse
@@ -404,6 +228,7 @@ int main()
     bool returnHome = false;
     bool found_target = false;
     bool run_BFS_to_target = false;
+    bool run_BFS_to_home = false;
     map<int, int> cameFrom;
     stack<Node> bfs_path;
     
@@ -459,19 +284,6 @@ int main()
             returnHome = true;
         }
         
-        // FOR DEBUGGING
-        /*
-        for (int i = 0; i < R; i++) 
-        {
-            for (int j = 0; j < C; j++)
-            {
-                cerr << " " << graph[i][j].visited;
-            }
-            cerr << endl;
-        }
-        */
-        // END FOR DEBUGGIN
-        
         string result = "";
         
         int up_x = KR > 0 ? KR - 1 : -1;
@@ -488,6 +300,17 @@ int main()
         {
             Node tmp = parents[KR][KC];
             result = getDirection_vol2(KR, KC, tmp.row, tmp.col);
+            graph[cx][cy].random_visited_again = true;
+            if (!run_BFS_to_home)
+            {
+                cerr << "Running BFS for returning home only once" << endl;
+                constructed_path = BFS_Search (graph, R, C, cx, cy, tx, ty, true);
+                run_BFS_to_home = true;
+            }
+            tmp = constructed_path.back();
+            constructed_path.pop_back();
+            result = getDirection_vol2(KR, KC, tmp.row, tmp.col);
+            cerr << "Constructed path size " << constructed_path.size() << endl;
         }
         else if (!found_target)
         {
@@ -523,8 +346,8 @@ int main()
             cerr << "Found the target. Runnning BFS to go to the control room..." << endl;
             if (!run_BFS_to_target)
             {
-                constructed_path = BFS_Search (graph, R, C, KR, KC, cx, cy);
-                cerr << "Ran the BFS so we have an updated data now" << endl;
+                constructed_path = BFS_Search (graph, R, C, KR, KC, cx, cy, false);
+                cerr << "Ran the BFS so we have an updated data now." << endl;
                 run_BFS_to_target = true;
                 if (!constructed_path.empty())
                 {

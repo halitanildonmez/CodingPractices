@@ -229,6 +229,8 @@ int main()
     bool found_target = false;
     bool run_BFS_to_target = false;
     bool run_BFS_to_home = false;
+    bool target_reachable = false;
+    
     map<int, int> cameFrom;
     stack<Node> bfs_path;
     
@@ -266,7 +268,7 @@ int main()
                     cx = i;
                     cy = j;
                     cerr << "Found the target at " << cx << " " << cy << endl;
-                    found_target = true;
+                    found_target = target_reachable ? true : false;
                     type = 10;
                 }
                 else if (c == 'T') // start position
@@ -351,21 +353,18 @@ int main()
                 run_BFS_to_target = true;
                 if (!constructed_path.empty())
                 {
+                    target_reachable = true;
                     cerr << "finding a value and getting a path " << endl;
                     Node cur_path = constructed_path.back();
                     constructed_path.pop_back();
                     result = getDirection_vol2(KR, KC, cur_path.row, cur_path.col);
                     parents[cur_path.row][cur_path.col] = graph[KR][KC];
                 }
-                /*
-                  # Continue until you reach root meta data (i.e. (None, None))
-                  while meta[state][0] is not None:
-                    state, action = meta[state]
-                    action_list.append(action)
-                  
-                  action_list.reverse()
-                  return action_list
-                */
+                else
+                {
+                    cerr << "Could not traverse to the target. Continuing regularly..." << endl;
+                    target_reachable = false;
+                }
             }
             else
             {

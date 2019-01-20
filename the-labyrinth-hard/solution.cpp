@@ -236,6 +236,8 @@ int main()
     
     list<Node> constructed_path;
     
+    int numTurnsUntilReachingTarget = 600;
+    
     // game loop
     while (1) {
         int KR; // row where Kirk is located.
@@ -296,23 +298,22 @@ int main()
         int left_y = KC > 0 ? KC - 1 : -1;
         int right_y = KC < C ? KC + 1 : -1;
         
-        int poses[] = {left_right_x, left_y, left_right_x, right_y, up_x, up_down_y, down_x, up_down_y};
+        int poses[] = {left_right_x, right_y, left_right_x, left_y, up_x, up_down_y, down_x, up_down_y};
         
         if (returnHome)
         {
             Node tmp = parents[KR][KC];
-            result = getDirection_vol2(KR, KC, tmp.row, tmp.col);
-            graph[cx][cy].random_visited_again = true;
+            result = "";
+            graph[KR][KC].random_visited_again = true;
             if (!run_BFS_to_home)
             {
                 cerr << "Running BFS for returning home only once" << endl;
-                constructed_path = BFS_Search (graph, R, C, cx, cy, tx, ty, true);
+                constructed_path = BFS_Search (graph, R, C, KR, KC, tx, ty, true);
                 run_BFS_to_home = true;
             }
             tmp = constructed_path.back();
             constructed_path.pop_back();
             result = getDirection_vol2(KR, KC, tmp.row, tmp.col);
-            cerr << "Constructed path size " << constructed_path.size() << endl;
         }
         else if (!found_target)
         {
@@ -379,6 +380,7 @@ int main()
             }
         }
         cout << result << endl;
+        numTurnsUntilReachingTarget--;
     } // end while
 }
 

@@ -21,6 +21,17 @@ Point2D trilateral (Point2D p1, Point2D p2, Point2D p3, float r1, float r2,
     return Point2D(x,y);
 }
 
+Point2D boxApp (int X0, int Y0, int W, int H, int sizeX, int sizeY)
+{
+    int b1 = X0 + sizeX;
+    int b2 = Y0 + sizeY;
+    if (b1 > W)
+        b1 = W-1;
+    if (b2 > H)
+        b2 = H-1;
+    return Point2D(b1,b2);
+}
+
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
@@ -40,6 +51,11 @@ int main()
     Point2D p2(W,0);
     Point2D p3(X0,H);
     
+    int bx = 3;
+    int by = 3;
+    
+    cerr << W << " " << H << endl;
+    
     // game loop
     while (1) {
         string bombDir; // Current distance to the bomb compared to previous distance (COLDER, WARMER, SAME or UNKNOWN)
@@ -50,14 +66,25 @@ int main()
         }
         else if (bombDir == "WARMER"){
             cerr << "WARMER" << endl;
-            p2 = Point2D(X0, 0);
-            
+            //p2 = Point2D(X0, 0);
+            if (bx > 0)
+                bx--;
+            if (by > 0)
+                by--;
         }
         else if (bombDir == "SAME") {
             cerr << "SAME" << endl;
+
         }
 
+        Point2D tri = boxApp(X0, Y0, W, H, bx, by);
+        X0 = tri.x;
+        Y0 = tri.y;
+        cout << tri.x << " " << tri.y << endl;
+        
+        /*
         Point2D tri = trilateral(p1, p2, p3, 3.f, 1.f, 1.f);
         cout << tri.x << " " << tri.y << endl;
+        */
     }
 }

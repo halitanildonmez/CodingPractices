@@ -13,8 +13,9 @@ struct Point2D
     Point2D (int cx, int cy):x(cx), y(cy) {}
 };
 
-struct Box {
-    float x0, x1, x2, x3;
+struct Bound {
+    int start, end;
+    Bound (int s, int e):start(s), end(e) {}
 };
 
 Point2D trilateral (Point2D p1, Point2D p2, Point2D p3, float r1, float r2,
@@ -44,6 +45,19 @@ void debugPoint(Point2D p) {
     cerr << p.x << " " << p.y << endl;
 }
 
+int to1DCoord (int x, int y, int w) {
+    return x + (w*y);
+}
+Point2D to2DCoord (int i, int w) {
+    int x = i % w;
+    int y = i / w;
+    return Point2D(x, y);
+}
+
+void debugBound(Bound p, int w) {
+    debugPoint(to2DCoord(p.start, w));
+    debugPoint(to2DCoord(p.end, w));
+}
 /**
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
@@ -58,29 +72,28 @@ int main()
     int X0;
     int Y0;
     cin >> X0 >> Y0; cin.ignore();
-
-    Point2D p1(0,0);
-    Point2D p2(W,0);
-    Point2D p3(X0,H);
     
     Point2D area(W, H);
-    
-    int bx = 3;
-    int by = 3;
-    
     int midX = W / 2;
     int midY = H / 2;
+    bool isCold = false;
     
     cerr << W << " " << H << endl;
     
-    bool isCold = false;
+    int pos_index = to1DCoord(W, H, W);
+    int R = pos_index/2;
+    int max = W*H - 1;
+    Bound leftBound(0, (pos_index/2));
+    Bound rightBound((pos_index/2 + 1), max);
     
+    debugBound(leftBound, W);
+    debugBound(rightBound, W);
     // game loop
     while (1) {
         string bombDir; // Current distance to the bomb compared to previous distance (COLDER, WARMER, SAME or UNKNOWN)
         cin >> bombDir; cin.ignore();
         
-        
+        int curIndex = to1DCoord(X0, Y0, W);
         
         if (bombDir == "COLDER") {
             cerr << "COLDER" << endl;
@@ -90,11 +103,23 @@ int main()
             
         } else if (bombDir == "WARMER") {
             cerr << "WARMER" << endl;
-            area = Point2D(W, midY);
+            area = Point2D(X0, Y0);
             debugPoint(area);
-                        
-            X0 = midX;
-            Y0 = midY;
+            //X0 = midX;
+            //Y0 = midY;
+            
+            // go to mid of right bound and update the bounds
+            
+            // if we are at an invalid place we need to look at the mid of 
+            // cur index and the rigth bound
+            if (!withinBound(rightBound.start + rightBound.start/2, max)) {
+                cerr << "wont " << endl;
+                int tmp = to1DCoord(X0, Y0, W) + rightBound.start;
+                rightBound = Bound(tmp/2 + 1, max);
+            } else {
+                rightBound = Bound(rightBound.start + rightBound.start/2, max);    
+            }
+            
         } else if (bombDir == "SAME") {
             cerr << "SAME" << endl;
         }
@@ -107,7 +132,13 @@ int main()
             if (!withinBound(midY, H))
                 midY = H - 1;
             
-            cout << midX << " " << midY << endl;
+            // go to center of right bound
+            Point2D test = to2DCoord(rightBound.start, W);
+            if (withinBound(rightBound.start + rightBound.start/2, max)) {
+                X0 = test.x;
+                Y0 = test.y;
+            }
+            cout << test.x << " " << test.y << endl;
         } else {
             midX++;
             cout << midX << " " << midY << endl;

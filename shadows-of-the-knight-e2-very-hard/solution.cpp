@@ -67,6 +67,9 @@ int main()
     cin >> X0 >> Y0; cin.ignore();
     cerr << W << " " << H << endl;
     
+    int moves[N];
+    int moveCount = 0;
+    
     int l = 0;
     int r = (W*H) - 1;
     
@@ -83,6 +86,7 @@ int main()
     
     int midPoint = floor((l+r)/2);
     int startIndex = to1DCoord(X0, Y0, W);
+    int sep = startIndex;
     if (startIndex < midPoint) {
         cerr << "up is down" << endl;
         cerr << "dist " << Euclidian1D(startIndex, midPoint, W) << endl;
@@ -111,7 +115,11 @@ int main()
                 l = midPoint;
                 //l = lastWarmPosition; //(wrong)
             } else {
-                l = m + 1;
+                // should have gone right from the last right
+                l = lastWarmPosition + 1;
+                cerr << moveCount << endl;
+                if (moveCount > 0)
+                    r = moves[moveCount-2];
             }
             
         } else if (bombDir == "WARMER") {
@@ -120,7 +128,7 @@ int main()
             if (isUpDown) {
                 l = m + 1;
             } else {
-                r = m - 1;    
+                r = m - 1;
             }
         } else if (bombDir == "SAME") {
             cerr << "SAME " << X0 << " - " << Y0 << endl;
@@ -146,10 +154,14 @@ int main()
         if (wasWarm) {
             totalDist += Euclidian1D(m, startIndex, W);
             lastWarmPosition = to1DCoord(X0, Y0, W);
+            startIndex = r;
         }
         // update to the current position
         Point2D dest = to2DCoord(m, W);
         X0 = dest.x;
         Y0 = dest.y;
+        
+        moves[moveCount] = r;
+        moveCount++;
     }
 }

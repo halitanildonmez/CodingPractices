@@ -6,6 +6,15 @@
 
 using namespace std;
 
+struct Move {
+    int l;
+    int r;
+    int m;
+    // 0 cold, 1 warm, 2 same
+    int type;
+    int left; // 0 => left 1 => right
+};
+
 struct Point2D
 {
     float x;
@@ -44,12 +53,20 @@ void debugPoint(Point2D p) {
 void debug1DPoint(int p, int w) {
     debugPoint(to2DCoord(p, w));
 }
+void debugMove (Move m, int w) {
+    cerr << "DEBUG MOVE " << endl;
+    debug1DPoint(m.l, w);
+    debug1DPoint(m.m, w);
+    debug1DPoint(m.r, w);
+    cerr << m.left << " - " << m.type << endl;
+}
 // -------------------------------------------
 
 void printRes (int m, int w) {
     Point2D output = to2DCoord(m, w);
     cout << output.x << " " << output.y << endl;
 }
+
 
 /**
  * Auto-generated code below aims at helping you parse
@@ -67,7 +84,7 @@ int main()
     cin >> X0 >> Y0; cin.ignore();
     cerr << W << " " << H << endl;
     
-    int moves[N];
+    Move moves[N];
     int moveCount = 0;
     
     int l = 0;
@@ -89,8 +106,6 @@ int main()
     int sep = startIndex;
     if (startIndex < midPoint) {
         cerr << "up is down" << endl;
-        cerr << "dist " << Euclidian1D(startIndex, midPoint, W) << endl;
-        
         isUpDown = true;
     }
     
@@ -103,11 +118,13 @@ int main()
         cin >> bombDir; cin.ignore();
         
         bool wasWarm = false;
+        int type = 0;
+        int isLeft = 0;
         
         if (bombDir == "COLDER") {
             cerr << "COLDER" << endl;
-            debug1DPoint(lastWarmPosition, W);
-            cerr << "total dist is " << totalDist << endl;
+            isLeft = 0;
+            //cerr << "total dist is " << totalDist << endl;
             if (isUpDown) {
                 // the output distance
                 r = m;
@@ -116,13 +133,40 @@ int main()
                 //l = lastWarmPosition; //(wrong)
             } else {
                 // should have gone right from the last right
-                l = lastWarmPosition + 1;
+                // also we have to go back like 2 moves
+                if (moveCount > 0) {
+                    // we are cold that is the current move
+                    Move lastWarm = moves[moveCount-1];
+                    cerr <<"Peek mid; "<< moves[moveCount-1].m << " " << m << endl;
+                    
+                    Move tm = lastWarm;
+                    int tm_i = moveCount-1;
+                    while (tm.m == m && tm_i >= 0) {
+                        --tm_i;
+                        tm = moves[tm_i];
+                    }
+                    
+                    cerr << tm.left << endl;
+                    if (tm.left == 1)
+                    {
+                        l = m + 1;
+                    }
+                    else 
+                    {
+                        l = tm.m + 1;
+                        r = tm.r;
+                    }
+                    
+                }
+                /*l = lastWarmPosition + 1;
                 cerr << moveCount << endl;
                 if (moveCount > 0)
-                    r = moves[moveCount-2];
+                    r = moves[moveCount-2];*/
             }
             
         } else if (bombDir == "WARMER") {
+            isLeft = 1;
+            type = 1;
             cerr << "WARMER " << endl;
             wasWarm = true;
             if (isUpDown) {
@@ -131,10 +175,11 @@ int main()
                 r = m - 1;
             }
         } else if (bombDir == "SAME") {
+            type = 2;
             cerr << "SAME " << X0 << " - " << Y0 << endl;
             l = m + 1;
         } else {
-            cerr << "Default " << endl;
+            
             // enter here on first try
         }
         cerr << "Calculating mid between \nLeft:";
@@ -148,7 +193,8 @@ int main()
         // calculate the distance to the last posint 
         // currently for debugging only
         startIndex = to1DCoord(X0, Y0, W);
-        cerr << "dist final: " << Euclidian1D(m, startIndex, W) << endl;
+        
+        cerr << "Mid " << m << endl;
         
         // update the last position where we were warmer
         if (wasWarm) {
@@ -161,7 +207,16 @@ int main()
         X0 = dest.x;
         Y0 = dest.y;
         
-        moves[moveCount] = r;
+        Move madeMove;
+        madeMove.l = l;
+        madeMove.r = r;
+        madeMove.m = m;
+        madeMove.type = type;
+        madeMove.left = isLeft;
+        
+        debugMove(madeMove, W);
+        
+        moves[moveCount] = madeMove;
         moveCount++;
     }
 }

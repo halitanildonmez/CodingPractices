@@ -179,6 +179,12 @@ int main()
     */
     bool isCase1 = true;
     
+    /*
+    If this counter is 2 this means that we should 
+    rewind to the previous moves
+    */
+    int yColdCount = 0;
+    
     int delta = 1;
     // game loop
     while (1) {
@@ -230,6 +236,7 @@ int main()
                     } else {
                         high_y = middle_y-1;
                     }
+                    yColdCount = 0;
                 } else if (ymoves == 1) {
                     cerr << "START CASE 2 FOR Y \n";
                     isCase1 = false;
@@ -261,10 +268,17 @@ int main()
                 }   
             } else if (searchY) {
                 if (ymoves > 1) {
-                    if (isCase1)
-                        low_y = middle_y + 1;
-                    else
+                    if (yColdCount > 0)
+                        cerr << "Should revind bruh\n";
+                    if (isCase1) {
+                        // goal can be between prev2 mid and this mid
+                        cerr << "Y Case 1 Cold \n";
+                        high_y = floor((low_y+middle_y)/2) - 1;
+                        // we know the goal is between (mid, this mid)
+                        low_y = zonePtr[currentMove-2].low;
+                    } else
                         high_y = middle_y - 1;
+                    yColdCount++;
                 } else if (ymoves == 1) {
                     cerr << "START CASE 1 FOR Y \n";
                     isCase1 = true;
@@ -317,10 +331,20 @@ int main()
             ymoves++;
         }
         
-        if (searchX)
+        Zone z;
+        if (searchX) {
+            z.low = low;
+            z.mid = middle;
+            z.high = high;
             cout << middle << " " << Y0 << endl;
-        else if (searchY)
+        } else if (searchY) {
+            z.low = low_y;
+            z.mid = middle_y;
+            z.high = high_y;
             cout << middle << " " << middle_y << endl;
+        }
+        
+        zonePtr[currentMove] = z;
         
         if (currentMove == 0) {
             middle =  floor((low+high)/2);

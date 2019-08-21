@@ -168,6 +168,17 @@ int main()
     diff_x = diff_y = 0;
     // BS End (LOL)
     
+    /*
+    Two cases: 
+    1: After setting to 0 you get Cold
+        Means that target is (mid, high)
+         AND you should go to right
+    2: After setting to 0 you get Warm
+        Means that target is (0, mid)
+         AND you should go left
+    */
+    bool isCase1 = true;
+    
     int delta = 1;
     // game loop
     while (1) {
@@ -175,11 +186,11 @@ int main()
         cin >> bombDir; cin.ignore();
         
         if (searchX){
-            cerr << "Move number: " << currentMove << 
+            cerr << "X Move number: " << currentMove << 
                 " low: " << low << " middle " << middle << " high " << 
                     high << endl;
         } else  {
-            cerr << "Move number: " << ymoves << 
+            cerr << "Y Move number: " << ymoves << 
                 " low y: " << low_y << " middle y: " << middle_y << " high y:" << 
                     high_y << endl;
         }
@@ -195,49 +206,97 @@ int main()
             searchY = false;
         }
         
-        
         State s;
         if (bombDir == "WARMER")
         {
             cerr << "W" << endl;
             s = WARM;
-            if (currentMove > 1 && searchX) {
-                high = middle;
-            }
-            
-            if (searchY && ymoves > 1) {
-                high_y = middle_y;
+            if (searchX) {
+                if (currentMove > 1) {
+                    if (isCase1) {
+                        low = middle+1;    
+                    } else {
+                        high = middle-1;
+                    }
+                } else if (currentMove == 1) {
+                    cerr << "START CASE 2\n";
+                    isCase1 = false;
+                    high = middle - 1;
+                }
+            } else if (searchY) {
+                if (ymoves > 1) {
+                    if (isCase1) {
+                        low_y = middle_y + 1;    
+                    } else {
+                        high_y = middle_y-1;
+                    }
+                } else if (ymoves == 1) {
+                    cerr << "START CASE 2 FOR Y \n";
+                    isCase1 = false;
+                    if (middle_y > 0)
+                        high_y = middle_y - 1;
+                    else {
+                        cerr << "Can not set to -1 need to calc middle manually\n";
+                        high_y = floor((low_y+high_y)/2);
+                    }
+                } else if (ymoves == 0) {
+                    cerr << "Start over for Y " << middle_y << "\n";
+                }
             }
         }
         else if (bombDir == "COLDER")
         {
             cerr << "C" << endl;
             s = COLD;
-            if (currentMove == 2)
-                high = middle;
-            else if (currentMove > 1)
-                low = middle + 1;
-            else if (currentMove == 1) {
-                low = middle + 1;
-            }
-                
-            if (searchY) {
-                if (ymoves == 2)
-                    high_y = middle_y;
-                else if (ymoves > 1)
+            if (searchX) {
+                if (currentMove > 1) {
+                    if (isCase1)
+                        low = middle + 1;
+                    else
+                        high = middle-1;
+                } else if (currentMove == 1) {
+                    cerr << "START CASE 1\n";
+                    isCase1 = true;
+                    low = middle + 1;
+                }   
+            } else if (searchY) {
+                if (ymoves > 1) {
+                    if (isCase1)
+                        low_y = middle_y + 1;
+                    else
+                        high_y = middle_y - 1;
+                } else if (ymoves == 1) {
+                    cerr << "START CASE 1 FOR Y \n";
+                    isCase1 = true;
                     low_y = middle_y + 1;
+                } else if (ymoves == 0) {
+                    cerr << "Start over for Y\n";
+                }
             }
         }
         else if (bombDir == "SAME")
         {
             cerr << "S" << endl;
             s = SAME;
+            if (searchY) {
+                if (isCase1) {
+                    cerr << "Same case 1 for Y \n";
+                    high_y = middle_y;
+                }
+            } else if (searchX) {
+                if (isCase1) {
+                    cerr << "Same case 1 for X \n";
+                    high = middle;
+                } else {
+                    cerr << "Same case 2 for X \n";
+                    low = middle+1;
+                }
+            }
         }
         else
         {
             cerr << "I" << endl;
             s = INVALID;
-            
         }
         
         if (searchX) 
@@ -273,7 +332,7 @@ int main()
         if (ymoves == 0) {
             middle_y = floor((low_y+high_y)/2);
             diff_y = 0 - Y0;
-            cerr << "Diff X is " << diff_x << endl;
+            cerr << "Diff Y is " << middle_y << endl;
         }
     }
 }

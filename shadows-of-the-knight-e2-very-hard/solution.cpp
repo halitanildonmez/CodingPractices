@@ -11,6 +11,14 @@ using namespace std;
  * the standard input according to the problem statement.
  **/
 
+struct Interval {
+    int cl;
+    int ch;
+    int wl;
+    int wh;
+};
+Interval *intervals;
+
 struct Zone {
     int low;
     int mid;
@@ -27,111 +35,13 @@ enum State {
     INVALID
 };
 
-int blind_binary_search(int curMove, State state, int M, int &X0, int &Y0, int area, bool searchY, int &delta)
-{
-    cerr << "Mid: " << M << " - " << curMove << endl;
-    switch (state)
-    {
-    case WARM:
-        if (curMove == 1 && !searchY) {
-            cerr << "CALC WARM ?" << endl;
-            Y0 = area - 1;
-        }
-        else {
-            if (!searchY)
-            {
-                cerr << "DELTA: " << delta << " " << X0 << " " << Y0 << endl;
-                if (delta  > 0)
-                    X0 = M + (1 * delta);   
-                else
-                    Y0 = M - 1;
-            }
-            else
-            {
-                X0 = M + (1 * delta);
-            }
-        }
-        
-        break;
-    case COLD:
-        if (curMove == 1 && !searchY) {
-            cerr << "We came from 0 so go down..." << endl;
-            Y0 = area - 1;
-        }
-        else if (curMove == 1 && searchY)
-        {
-            Y0 = M - 1;
-        }
-        else {
-            cerr << "We should go back" << endl;
-            //PlayZone prev = zones[curMove - 2];
-            Zone prev = zonePtr[curMove - 2];
-            cerr << "Revinding to L " << prev.low << " R: " << M << prev.mid << " + " << prev.high << endl;
-            X0 = prev.low;
-            Y0 = prev.mid;
-            
-            cerr << "Has to be between " << X0 << " and " << zonePtr[curMove - 1].mid << endl;
-            Y0 = zonePtr[curMove - 1].mid;
-            
-            int tmpM = floor((X0 + Y0) / 2);
-            
-            if (tmpM - Y0 < 0)
-            {
-                cerr << "Delta should be -1 so we have to go opposite dir" << endl;
-                delta = -1;
-            }
-        }
-        break;
-    case SAME:
-    case INVALID:
-    default:
-        if (searchY)
-        {
-            X0 = 0;
-            Y0 = area - 1;
-        }
-        else
-        {
-            X0 = 0;
-            Y0 = 0;
-        }
-        break;
-    }
-    
-    M = floor((X0 + Y0) / 2);
-    Zone z;//(X0, M, Y0);
-    z.low = X0;
-    z.mid = M;
-    z.high = Y0;
-    z.area = area;
-    cerr << "X0: " << X0 << " Y0: " << Y0 << " M: " << M << " " << z.area << endl;
-    zonePtr[curMove] = z;
-    return M;
+
+void dd (Zone z, string msg) {
+    cerr << msg << "\t\n" << z.low << " " << z.mid << " " << z.high << endl;
 }
 
-int search_x(int curMove, State state, int M, int &X0, int &Y0, int area, bool searchY, int &delta)
-{
-    cerr << "Start: \ncurMove " << curMove << " X0: " << X0 << " Y0: " << Y0 << " M: " << M << " Area: " << 
-                area << " Delta: " << delta << endl;
-    Zone z;
-    
-    switch (state)
-    {
-        case WARM:
-    
-            return M;
-        case COLD:
-  
-            return M;
-        case SAME:
-            return M;
-        case INVALID:
-            cerr << "Invalid set to 0\n";
-            return 0;
-        default:
-            return -1;
-    }
-    return -1;
+void deg (Interval i, string m) {
+    cerr << m << "\n"<< i.cl << " " << i.ch << " " << i.wl << " " << i.wh << endl;
 }
 
 int main()
@@ -186,246 +96,188 @@ int main()
     int yColdCount = 0;
     
     int delta = 1;
+    
+    // test
+    int lowTest = 0;
+    int midTest = 0;
+    int highTest = W;
+    Zone currentZone;
+
+    
+    Interval current;
+    current.cl = 0;
+    current.ch = X0-1;
+    current.wl = current.ch + 1;
+    current.wh = W-1;
+    intervals = new Interval[N];
+    bool first = true;
+    
+    Zone cold;
+    cold.low = 0;
+    cold.high = W/2;
+    cold.mid = 0;
+    
+    Zone warm;
+    warm.low = cold.high+1;
+    warm.high = W-1;
+    
+    Zone outputZone;
+    outputZone.low = W/2;
+    outputZone.high = W-1;
+    
     // game loop
     while (1) {
         string bombDir; // Current distance to the bomb compared to previous distance (COLDER, WARMER, SAME or UNKNOWN)
         cin >> bombDir; cin.ignore();
-        
-        if (searchX){
-            cerr << "X Move number: " << currentMove << 
-                " low: " << low << " middle " << middle << " high " << 
-                    high << endl;
-        } else  {
-            cerr << "Y Move number: " << ymoves << 
-                " low y: " << low_y << " middle y: " << middle_y << " high y:" << 
-                    high_y << endl;
-        }
-                
-        if (low == high) {
-            cerr << "Search X is found.\n";
+
+        if (warm.low == warm.high && searchX) {
+            cerr << "Found X at " << X0 << endl;
             searchX = false;
             searchY = true;
+            currentMove = 0;
+            
+            cold.low = 0;
+            cold.high = H/2;
+            cold.mid = 0;
+            
+            warm.low = cold.high+1;
+            warm.high = H-1;
+            
+            outputZone.low = H/2;
+            outputZone.high = H-1;
         }
         
-        if (low_y == high_y) {
-            cerr << "Search Y is found.\n";
-            searchY = false;
-        }
+        dd(cold, "Cold ");
+        dd(warm, "Warm ");
+        cerr << "Current move: " << currentMove << " X0: " << X0 << " Y0: "<< Y0 << endl;
         
         State s;
         if (bombDir == "WARMER")
         {
             cerr << "W" << endl;
             s = WARM;
-            if (searchX) {
-                if (currentMove > 1) {
-                    if (isCase1) {
-                        low = middle+1;    
-                    } else {
-                        high = middle-1;
-                    }
-                } else if (currentMove == 1) {
-                    cerr << "START CASE 2\n";
-                    isCase1 = false;
-                    high = middle - 1;
-                }
+            if ((X0 == 0 && searchX) || (searchY && currentMove == 1)){
+                cerr << "Try the warm interval now\n";
+                outputZone.low = warm.low;
+                outputZone.high = warm.high;
+                warm.high = cold.high;
+                cold.high = (cold.high/2);
+                warm.low = cold.high + 1;
+            } else if (searchY && currentMove == 0) {
+                cerr << "First move for Y\n";
+                outputZone.low = warm.low;
+                outputZone.high = warm.high;
             } else if (searchY) {
-                if (ymoves > 1) {
-                    if (isCase1) {
-                        low_y = middle_y + 1;    
+                if (currentMove == 2) {
+                    cerr << "Coming from 0\n";
+                    outputZone = warm;
+                } else {
+                    int tt = ((cold.low+cold.high)/2);
+                    if (Y0 == tt) {
+                        cerr << "WW came from cold so try warm\n";
+                        if (currentMove > 2) {
+                            /*Zone tmpt = cold;
+                            cold.high = ((cold.low+cold.high)/2);
+                            warm.low = cold.high + 1;
+                            warm.high = tmpt.high;*/
+                        }
+                        outputZone = warm;
                     } else {
-                        high_y = middle_y-1;
-                    }
-                    yColdCount = 0;
-                } else if (ymoves == 1) {
-                    cerr << "START CASE 2 FOR Y \n";
-                    isCase1 = false;
-                    if (middle_y > 0)
-                        high_y = middle_y - 1;
-                    else {
-                        cerr << "Can not set to -1 need to calc middle manually\n";
-                        high_y = floor((low_y+high_y)/2);
-                    }
-                } else if (ymoves == 0) {
-                    cerr << "Start over for Y " << middle_y << "\n";
+                        // came from warm so try cold
+                        warm.high = cold.high;
+                        warm.low = ((cold.low+cold.high)/2) + 1;
+                        cold.high = warm.low - 1;
+                        outputZone = cold;
+                    }   
+                }
+            } else {
+                // try the warm interval now
+                Zone tmp = cold;
+                Zone tmp2 = warm;
+                if (cold.high != 1) {
+                    cold.high = (cold.high/2);
+                    warm.low = cold.high + 1;
+                    warm.high = tmp.high;
+                    outputZone = warm;   
+                } else {
+                    cold.low = cold.high;
+                    outputZone = cold;
                 }
             }
-        }
-        else if (bombDir == "COLDER")
-        {
+        } else if (bombDir == "COLDER") {
             cerr << "C" << endl;
             s = COLD;
-            if (searchX) {
-                if (currentMove > 1) {
-                    if (isCase1)
-                        low = middle + 1;
-                    else
-                        high = middle-1;
-                } else if (currentMove == 1) {
-                    cerr << "START CASE 1\n";
-                    isCase1 = true;
-                    low = middle + 1;
-                }   
+            // this means we should update te warm part
+            if ((currentMove == 1 && searchX)) {
+                cerr << "Try 0 to cut properly\n";
+                outputZone.low = 0;
+                outputZone.high = 0;
+                cold.high = (cold.high/2);
+                warm.low = cold.high+1;
+                warm.high = (W/2) - 1;
             } else if (searchY) {
-                if (ymoves > 1) {
-                    if (yColdCount > 0)
-                        cerr << "Should revind bruh\n";
-                    if (isCase1) {
-                        // goal can be between prev2 mid and this mid
-                        cerr << "Y Case 1 Cold \n";
-                        high_y = floor((low_y+middle_y)/2) - 1;
-                        // we know the goal is between (mid, this mid)
-                        low_y = zonePtr[currentMove-2].low;
-                    } else
-                        high_y = middle_y - 1;
-                    yColdCount++;
-                } else if (ymoves == 1) {
-                    cerr << "START CASE 1 FOR Y \n";
-                    isCase1 = true;
-                    low_y = middle_y + 1;
-                } else if (ymoves == 0) {
-                    cerr << "Start over for Y\n";
+                int tt = ((cold.low+cold.high)/2);
+                if (Y0 == tt) {
+                    cerr << "CC came from cold so try warm\n";
+                    cold.low = warm.low;
+                    cold.high = ((warm.low+warm.high)/2);
+                    warm.low = cold.high + 1;
+                    outputZone = warm;
+                } else {
+                    cerr << "CC came from WARM so try cold 2\n";
+                    if (Y0 == 0) {
+                        cold.low = warm.low;
+                        cold.high = ((warm.low+warm.high)/2);
+                        warm.low = cold.high + 1;
+                        outputZone = warm;
+                    } else {
+                        // came from warm so try cold
+                        warm.high = cold.high;
+                        warm.low = ((cold.low+cold.high)/2) + 1;
+                        cold.high = warm.low - 1;
+                        outputZone = warm;                 
+                    }
                 }
+            } else {
+                cerr << "We tried the warm interval\n";
+                // try the cold interval now
+                if (cold.low == cold.high) {
+                    cerr << "No more to try for cold\n";
+                    Zone tmp = warm;
+                    cold.low = tmp.low;
+                    cold.high = ((tmp.low+tmp.high)/2);
+                    warm.low = cold.high + 1;
+                    warm.high = tmp.high;
+                }
+                outputZone = warm; 
             }
-        }
-        else if (bombDir == "SAME")
-        {
+        } else if (bombDir == "SAME") {
             cerr << "S" << endl;
             s = SAME;
-            if (searchY) {
-                if (isCase1) {
-                    cerr << "Same case 1 for Y \n";
-                    high_y = middle_y;
-                }
-            } else if (searchX) {
-                if (isCase1) {
-                    cerr << "Same case 1 for X \n";
-                    high = middle;
-                } else {
-                    cerr << "Same case 2 for X \n";
-                    low = middle+1;
-                }
-            }
-        }
-        else
-        {
+        } else {
             cerr << "I" << endl;
             s = INVALID;
         }
         
-        if (searchX) 
-        {
-            //midX = search_x(currentMove, s, midX, x0, x1, W, false, delta);
-            if (currentMove == 0)
-                middle = 0;
-            else
-                middle = floor((low+high)/2);
-        }
+        if (currentMove == 1 && searchY)
+            outputZone.low = outputZone.high = 0;
+        
+        // calculate the mid 
+        outputZone.mid = floor((outputZone.low + outputZone.high)/2);
+        // output mid for x or y
+        if (searchX)
+            X0 = outputZone.mid;
         else
-        {
-            //Y0 = blind_binary_search(currentMove, s, midY, y0, y1, H, true, delta);
-            if (ymoves == 0)
-                middle_y = 0;
-            else
-                middle_y = floor((low_y+high_y)/2);
-            ymoves++;
-        }
+            Y0 = outputZone.mid;
         
-        Zone z;
-        if (searchX) {
-            z.low = low;
-            z.mid = middle;
-            z.high = high;
-            cout << middle << " " << Y0 << endl;
-        } else if (searchY) {
-            z.low = low_y;
-            z.mid = middle_y;
-            z.high = high_y;
-            cout << middle << " " << middle_y << endl;
-        }
-        
-        zonePtr[currentMove] = z;
-        
-        if (currentMove == 0) {
-            middle =  floor((low+high)/2);
-            diff_x = 0 - X0;
-            cerr << "Diff X is " << diff_x << endl;
-        }
+        // print result
+        cout << X0 << " " << Y0 << endl;
+        // update the interval and the current zone
+        // this is just in case
+        intervals[currentMove] = current;
+        zonePtr[currentMove] = outputZone;
         currentMove++;
-        
-        if (ymoves == 0) {
-            middle_y = floor((low_y+high_y)/2);
-            diff_y = 0 - Y0;
-            cerr << "Diff Y is " << middle_y << endl;
-        }
+        // no longer the first move
+        first = false;
     }
 }
-
-/**
-        if (bombDir == "WARMER") {
-            cerr << "W" << endl;
-            if (currentMove == 1) {
-                Y0 = total/2 - 1;
-            }
-            else {
-                X0 = M + delta;    
-            }
-        } else if (bombDir == "COLDER") {
-            cerr<<"C"<<endl;
-            if (currentMove == 1) {
-                cerr << "We came from 0 so go down..." << endl;
-                Y0 = total-1;
-            }
-            else {
-                cerr << "We should go back" << endl;
-                Zone prev = zones[currentMove-2];
-                cerr << "Revinding to L " << prev.low << 
-                        " R: " << M << endl;
-                if (prev.low == 0 && prev.high == 0)
-                {
-                    cerr << "Going back is the same positon" << endl;
-                    Y0 = M - 1;
-                }
-                else 
-                {
-                    X0 = prev.low;
-                    Y0 = prev.mid;   
-                }
-            }
-        } else if (bombDir == "SAME") {
-            cerr<<"S"<<endl;
-            // TODO: change
-            //delta = -1;
-            X0 = M + delta;
-            total = W;
-            X0 = 0;
-            Y0 = total/2 - 1;
-            gX = X0;
-            cerr << "Goal at " << X0 << endl;
-            //currentMove = 0;
-        } else {
-            // First move start from 0
-            X0 = 0; 
-            Y0 = 0;
-            ll = true;
-        }
-
-        Zone z;
-        z.low = X0;
-        z.high = Y0;
-        
-        M = floor((X0+Y0)/2);
-        z.mid = M;
-        cerr << "X0: " << X0 << " Y0: " << Y0 << " M: " << M << endl;
-    
-        if (gX != -1)
-        {
-            cout << M << " " << gX << endl;
-        }
-        else
-        {
-            cout << 0 << " " << M << endl;    
-        }
-        
-        zones[currentMove++] = z;
-*/

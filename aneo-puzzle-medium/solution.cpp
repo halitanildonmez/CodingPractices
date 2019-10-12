@@ -14,7 +14,7 @@ float calculate_v (float x, float t)
 {
     return x/t;
 }
-// meters to kilometers(km)
+// meters to kilometers
 float m2km(float distance) 
 {
     return distance/1000;
@@ -69,6 +69,7 @@ int main()
         }
             
         v_out = v_cur;
+        time_elapsed += calculate_v(km_dist, v_cur);
     }
     cerr << "output speed (km/h): " << v_out << endl;
     cout << (int)v_out << endl;

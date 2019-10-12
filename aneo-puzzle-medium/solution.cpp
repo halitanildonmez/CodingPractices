@@ -14,7 +14,7 @@ float calculate_v (float x, float t)
 {
     return x/t;
 }
-// meters to kilometers
+// meters to kilometers(km)
 float m2km(float distance) 
 {
     return distance/1000;

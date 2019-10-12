@@ -58,6 +58,14 @@ int main()
             v_cur = speed;
         else{
             cerr << "Speed is not enough" << endl;
+            float new_time = calculate_v(km_dist, speed);
+            if (new_time > h_dur)
+            {
+                float new_speed = calculate_v(km_dist, 2*current_time);
+                cerr << "max speed is too slow " << new_time << endl;
+                if (new_time <= speed)
+                    v_cur = new_speed;
+            }
         }
             
         v_out = v_cur;

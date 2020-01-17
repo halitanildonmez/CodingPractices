@@ -1,0 +1,1 @@
+Submission for Prime Spiral problem at kattis.
